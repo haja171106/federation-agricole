@@ -5,13 +5,14 @@ info:
     API REST pour la gestion digitale de la fédération de collectivités agricoles de Madagascar.
     Cette spécification couvre l'ensemble des fonctionnalités :
     - **A** : Ouverture d'une nouvelle collectivité
-    - **B** : Admission d'un nouveau membre
+    - **B** : Admission d'un nouveau membre (conditions mises à jour – B-2)
     - **C** : Cotisations et paiements
     - **D** : Situation de trésorerie
     - **E** : Activités des collectivités et de la fédération
     - **F** : Assiduité des membres
     - **G** : Statistiques d'une collectivité
-  version: 1.0.0
+    - **H** : Statistiques de la fédération *(nouveau)*
+  version: 2.0.0
   contact:
     name: Haute École d'Informatique
   license:
@@ -24,7 +25,7 @@ tags:
   - name: Collectivités
     description: "Section A – Gestion des collectivités agricoles"
   - name: Membres
-    description: "Section B – Admission et gestion des membres et mandats"
+    description: "Section B / B-2 – Admission et gestion des membres et mandats"
   - name: Cotisations
     description: "Section C – Cotisations et encaissements"
   - name: Comptes
@@ -36,9 +37,10 @@ tags:
   - name: Statistiques
     description: "Section G – Statistiques d'une collectivité"
   - name: Fédération
-    description: Gestion nationale de la fédération
+    description: "Sections H + divers – Gestion nationale de la fédération"
 
 paths:
+
   /collectivites:
     get:
       tags: [Collectivités]
@@ -197,10 +199,21 @@ paths:
       tags: [Membres]
       summary: Admettre un nouveau membre dans une collectivité
       description: |
-        Conditions requises :
-        - Parrainage obligatoire par un membre confirmé avec plus de 90 jours d'ancienneté
-        - Informations personnelles complètes
-        - Frais d'adhésion de 50 000 MGA payé par mobile money ou virement bancaire
+        **Conditions d'admission mises à jour (B-2) :**
+
+        1. **Parrainage multiple** : le candidat doit être parrainé par **au moins 2 membres confirmés**
+           de la fédération. Le nombre de parrains issus de la collectivité cible doit être **≥** au
+           nombre de parrains extérieurs.
+           - ✅ 2 parrains de la collectivité cible → autorisé
+           - ✅ 1 parrain de la collectivité cible + 1 parrain extérieur → autorisé
+           - ✅ 3 parrains de la collectivité cible + 2 parrains extérieurs → autorisé
+           - ❌ 0 parrain de la collectivité cible + 2 parrains extérieurs → refusé
+
+        2. **Informations personnelles** complètes, incluant la **nature de la relation** avec chaque parrain
+           (famille, amis, collègues, etc.).
+
+        3. **Paiement** : frais d'adhésion de **50 000 MGA** + **intégralité des cotisations annuelles
+           obligatoires** définies par la collectivité.
       operationId: admettreMembreCollectivite
       parameters:
         - $ref: '#/components/parameters/collectiviteId'
@@ -265,7 +278,9 @@ paths:
     post:
       tags: [Membres]
       summary: Transférer un membre vers une autre collectivité
-      description: Un membre peut changer de collectivité (ex. déménagement)
+      description: |
+        Un membre peut changer de collectivité (ex. déménagement).
+        Le transfert applique les mêmes conditions d'admission B-2 dans la collectivité destination.
       operationId: transfererMembre
       parameters:
         - $ref: '#/components/parameters/membreId'
@@ -359,6 +374,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+
   /collectivites/{collectiviteId}/cotisations:
     get:
       tags: [Cotisations]
@@ -442,6 +458,7 @@ paths:
                 $ref: '#/components/schemas/Cotisation'
         '404':
           $ref: '#/components/responses/NotFound'
+
 
   /collectivites/{collectiviteId}/comptes:
     get:
@@ -534,92 +551,6 @@ paths:
                 $ref: '#/components/schemas/Compte'
         '404':
           $ref: '#/components/responses/NotFound'
-
-  /federation/comptes:
-    get:
-      tags: [Fédération]
-      summary: Lister les comptes de la fédération
-      operationId: listComptesFederation
-      parameters:
-        - in: query
-          name: type
-          schema:
-            $ref: '#/components/schemas/TypeCompteEnum'
-      responses:
-        '200':
-          description: Liste des comptes de la fédération
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Compte'
-
-    post:
-      tags: [Fédération]
-      summary: Créer un compte pour la fédération
-      description: Une seule caisse autorisée pour la fédération
-      operationId: createCompteFederation
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CompteCreateRequest'
-      responses:
-        '201':
-          description: Compte créé
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Compte'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '422':
-          $ref: '#/components/responses/UnprocessableEntity'
-
-  /federation/comptes/{compteId}:
-    get:
-      tags: [Fédération]
-      summary: Obtenir les détails d'un compte de la fédération
-      operationId: getCompteFederation
-      parameters:
-        - $ref: '#/components/parameters/compteId'
-      responses:
-        '200':
-          description: Détails du compte
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Compte'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-    put:
-      tags: [Fédération]
-      summary: Mettre à jour le solde d'un compte de la fédération
-      operationId: updateCompteFederation
-      parameters:
-        - $ref: '#/components/parameters/compteId'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CompteUpdateRequest'
-      responses:
-        '200':
-          description: Compte mis à jour
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Compte'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-  # ================================================================
-  # E — ACTIVITÉS
-  # ================================================================
 
   /collectivites/{collectiviteId}/calendrier:
     get:
@@ -784,105 +715,6 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /federation/activites:
-    get:
-      tags: [Fédération]
-      summary: Lister les activités planifiées par la fédération
-      operationId: listActivitesFederation
-      parameters:
-        - in: query
-          name: dateDebut
-          schema:
-            type: string
-            format: date
-        - in: query
-          name: dateFin
-          schema:
-            type: string
-            format: date
-        - $ref: '#/components/parameters/queryPage'
-        - $ref: '#/components/parameters/querySize'
-      responses:
-        '200':
-          description: Liste paginée des activités
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PageActivite'
-
-    post:
-      tags: [Fédération]
-      summary: Planifier une activité nationale (fédération)
-      description: |
-        La fédération peut inviter toutes les collectivités ou un sous-ensemble.
-        Exemple : assemblée générale annuelle de toutes les collectivités.
-      operationId: createActiviteFederation
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ActiviteFederationCreateRequest'
-      responses:
-        '201':
-          description: Activité créée
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Activite'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-
-  /federation/activites/{activiteId}:
-    get:
-      tags: [Fédération]
-      summary: Obtenir les détails d'une activité de la fédération
-      operationId: getActiviteFederation
-      parameters:
-        - $ref: '#/components/parameters/activiteId'
-      responses:
-        '200':
-          description: Détails de l'activité
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Activite'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-    put:
-      tags: [Fédération]
-      summary: Mettre à jour une activité de la fédération
-      operationId: updateActiviteFederation
-      parameters:
-        - $ref: '#/components/parameters/activiteId'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ActiviteFederationCreateRequest'
-      responses:
-        '200':
-          description: Activité mise à jour
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Activite'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-    delete:
-      tags: [Fédération]
-      summary: Supprimer une activité de la fédération
-      operationId: deleteActiviteFederation
-      parameters:
-        - $ref: '#/components/parameters/activiteId'
-      responses:
-        '204':
-          description: Activité supprimée
-        '404':
-          $ref: '#/components/responses/NotFound'
 
   /activites/{activiteId}/presences:
     get:
@@ -1086,6 +918,347 @@ paths:
           $ref: '#/components/responses/NotFound'
 
 
+  /federation/statistiques/assiduite:
+    get:
+      tags: [Fédération]
+      summary: "H – Taux d'assiduité global de chaque collectivité sur une période"
+      description: |
+        Recensé mensuellement par le secrétaire de la fédération.
+        Présenté lors des assemblées générales annuelles.
+      operationId: getAssiduiteParCollectivite
+      parameters:
+        - in: query
+          name: dateDebut
+          required: true
+          schema:
+            type: string
+            format: date
+          description: Début de la période
+        - in: query
+          name: dateFin
+          required: true
+          schema:
+            type: string
+            format: date
+          description: Fin de la période
+        - $ref: '#/components/parameters/queryPage'
+        - $ref: '#/components/parameters/querySize'
+      responses:
+        '200':
+          description: Taux d'assiduité global par collectivité
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PageAssiduiteCollectivite'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /federation/statistiques/cotisations:
+    get:
+      tags: [Fédération]
+      summary: "H – Pourcentage de membres à jour dans leurs cotisations par collectivité"
+      description: |
+        Recensé mensuellement par le secrétaire de la fédération.
+        Présenté lors des assemblées générales annuelles.
+      operationId: getCotisationsStatParCollectivite
+      parameters:
+        - in: query
+          name: dateDebut
+          required: true
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: dateFin
+          required: true
+          schema:
+            type: string
+            format: date
+        - $ref: '#/components/parameters/queryPage'
+        - $ref: '#/components/parameters/querySize'
+      responses:
+        '200':
+          description: Taux de cotisants à jour par collectivité
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PageCotisationStatCollectivite'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /federation/statistiques/adhesions:
+    get:
+      tags: [Fédération]
+      summary: "H – Nombre de nouveaux adhérents par collectivité sur une période"
+      description: |
+        Recensé mensuellement par le secrétaire de la fédération.
+        Présenté lors des assemblées générales annuelles.
+      operationId: getAdhesionsParCollectivite
+      parameters:
+        - in: query
+          name: dateDebut
+          required: true
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: dateFin
+          required: true
+          schema:
+            type: string
+            format: date
+        - $ref: '#/components/parameters/queryPage'
+        - $ref: '#/components/parameters/querySize'
+      responses:
+        '200':
+          description: Nombre de nouveaux adhérents par collectivité
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PageAdhesionStatCollectivite'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /federation/rapports/mensuel:
+    get:
+      tags: [Fédération]
+      summary: "H – Rapport mensuel global de la fédération"
+      description: |
+        Rapport agrégé établi par le secrétaire de la fédération pour un mois donné.
+        Contient les trois indicateurs H : assiduité, cotisations à jour et nouveaux adhérents.
+      operationId: getRapportMensuelFederation
+      parameters:
+        - in: query
+          name: mois
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 12
+          description: Mois du rapport (1 = Janvier … 12 = Décembre)
+        - in: query
+          name: annee
+          required: true
+          schema:
+            type: integer
+            example: 2025
+      responses:
+        '200':
+          description: Rapport mensuel de la fédération
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RapportMensuelFederation'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /federation/rapports/annuel:
+    get:
+      tags: [Fédération]
+      summary: "H – Rapport annuel global de la fédération"
+      description: |
+        Rapport annuel présenté lors des assemblées générales.
+        Permet d'identifier les collectivités méritantes et celles à améliorer.
+      operationId: getRapportAnnuelFederation
+      parameters:
+        - in: query
+          name: annee
+          required: true
+          schema:
+            type: integer
+            example: 2025
+      responses:
+        '200':
+          description: Rapport annuel de la fédération
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RapportAnnuelFederation'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /federation/comptes:
+    get:
+      tags: [Fédération]
+      summary: Lister les comptes de la fédération
+      operationId: listComptesFederation
+      parameters:
+        - in: query
+          name: type
+          schema:
+            $ref: '#/components/schemas/TypeCompteEnum'
+      responses:
+        '200':
+          description: Liste des comptes de la fédération
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Compte'
+
+    post:
+      tags: [Fédération]
+      summary: Créer un compte pour la fédération
+      description: Une seule caisse autorisée pour la fédération
+      operationId: createCompteFederation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompteCreateRequest'
+      responses:
+        '201':
+          description: Compte créé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Compte'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
+  /federation/comptes/{compteId}:
+    get:
+      tags: [Fédération]
+      summary: Obtenir les détails d'un compte de la fédération
+      operationId: getCompteFederation
+      parameters:
+        - $ref: '#/components/parameters/compteId'
+      responses:
+        '200':
+          description: Détails du compte
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Compte'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags: [Fédération]
+      summary: Mettre à jour le solde d'un compte de la fédération
+      operationId: updateCompteFederation
+      parameters:
+        - $ref: '#/components/parameters/compteId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompteUpdateRequest'
+      responses:
+        '200':
+          description: Compte mis à jour
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Compte'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /federation/activites:
+    get:
+      tags: [Fédération]
+      summary: Lister les activités planifiées par la fédération
+      operationId: listActivitesFederation
+      parameters:
+        - in: query
+          name: dateDebut
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: dateFin
+          schema:
+            type: string
+            format: date
+        - $ref: '#/components/parameters/queryPage'
+        - $ref: '#/components/parameters/querySize'
+      responses:
+        '200':
+          description: Liste paginée des activités
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PageActivite'
+
+    post:
+      tags: [Fédération]
+      summary: Planifier une activité nationale (fédération)
+      description: |
+        La fédération peut inviter toutes les collectivités ou un sous-ensemble.
+        Exemple : assemblée générale annuelle de toutes les collectivités.
+      operationId: createActiviteFederation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActiviteFederationCreateRequest'
+      responses:
+        '201':
+          description: Activité créée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Activite'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /federation/activites/{activiteId}:
+    get:
+      tags: [Fédération]
+      summary: Obtenir les détails d'une activité de la fédération
+      operationId: getActiviteFederation
+      parameters:
+        - $ref: '#/components/parameters/activiteId'
+      responses:
+        '200':
+          description: Détails de l'activité
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Activite'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags: [Fédération]
+      summary: Mettre à jour une activité de la fédération
+      operationId: updateActiviteFederation
+      parameters:
+        - $ref: '#/components/parameters/activiteId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActiviteFederationCreateRequest'
+      responses:
+        '200':
+          description: Activité mise à jour
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Activite'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Fédération]
+      summary: Supprimer une activité de la fédération
+      operationId: deleteActiviteFederation
+      parameters:
+        - $ref: '#/components/parameters/activiteId'
+      responses:
+        '204':
+          description: Activité supprimée
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /federation:
     get:
       tags: [Fédération]
@@ -1178,7 +1351,6 @@ paths:
                 $ref: '#/components/schemas/MandatFederation'
         '404':
           $ref: '#/components/responses/NotFound'
-
 
 components:
 
@@ -1277,7 +1449,6 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
-
 
   schemas:
 
@@ -1385,6 +1556,12 @@ components:
         nombreMembresActifs:
           type: integer
           readOnly: true
+        cotisationsAnnuellesObligatoiresMGA:
+          type: number
+          description: |
+            Montant des cotisations annuelles obligatoires fixées par la collectivité (en MGA).
+            Ce montant est dû par tout nouveau membre en plus des frais d'adhésion (B-2).
+          example: 200000
       required:
         - id
         - numero
@@ -1407,6 +1584,10 @@ components:
         dateCreation:
           type: string
           format: date
+        cotisationsAnnuellesObligatoiresMGA:
+          type: number
+          description: Montant des cotisations annuelles obligatoires en MGA
+          example: 200000
         membresInitiaux:
           type: array
           description: |
@@ -1431,6 +1612,8 @@ components:
           type: string
         ville:
           type: string
+        cotisationsAnnuellesObligatoiresMGA:
+          type: number
 
     AutorisationRequest:
       type: object
@@ -1515,6 +1698,12 @@ components:
 
     AdmissionMembreRequest:
       type: object
+      description: |
+        Conditions d'admission B-2 :
+        - Au moins 2 parrains membres confirmés
+        - Parrains de la collectivité cible ≥ parrains extérieurs
+        - Nature de la relation renseignée pour chaque parrain
+        - Frais d'adhésion 50 000 MGA + cotisations annuelles obligatoires de la collectivité
       properties:
         nom:
           type: string
@@ -1535,11 +1724,15 @@ components:
         email:
           type: string
           format: email
-        parrainId:
-          type: string
-          format: uuid
-          description: Identifiant du parrain (doit être MEMBRE_CONFIRME avec > 90 jours d'ancienneté)
-        fraisAdhesion:
+        parrains:
+          type: array
+          minItems: 2
+          description: |
+            Liste des parrains (minimum 2 membres confirmés de la fédération).
+            Le nombre de parrains issus de la collectivité cible doit être ≥ au nombre de parrains extérieurs.
+          items:
+            $ref: '#/components/schemas/ParrainRequest'
+        paiement:
           $ref: '#/components/schemas/PaiementAdmissionRequest'
       required:
         - nom
@@ -1550,17 +1743,32 @@ components:
         - metier
         - telephone
         - email
-        - parrainId
-        - fraisAdhesion
+        - parrains
+        - paiement
+
+    ParrainRequest:
+      type: object
+      description: Référence à un parrain avec la nature de la relation
+      properties:
+        membreId:
+          type: string
+          format: uuid
+          description: Identifiant du membre confirmé parrain
+        relationAvecCandidat:
+          type: string
+          description: Nature de la relation entre le parrain et le candidat (ex. famille, amis, collègues)
+          example: "famille"
+      required:
+        - membreId
+        - relationAvecCandidat
 
     PaiementAdmissionRequest:
       type: object
-      description: Paiement du frais d'adhésion de 50 000 MGA
+      description: |
+        Paiement des frais d'adhésion (50 000 MGA) et des cotisations annuelles obligatoires.
+        Le montant total attendu = 50 000 MGA + cotisationsAnnuellesObligatoiresMGA de la collectivité.
+        Espèces non acceptées pour l'adhésion.
       properties:
-        montant:
-          type: number
-          example: 50000
-          description: Montant en MGA (doit être 50 000)
         modePaiement:
           type: string
           enum:
@@ -1571,7 +1779,6 @@ components:
           type: string
           description: Référence de la transaction
       required:
-        - montant
         - modePaiement
         - reference
 
@@ -1597,9 +1804,19 @@ components:
           format: date
         motif:
           type: string
+        parrains:
+          type: array
+          minItems: 2
+          description: Parrains requis dans la collectivité destination (règle B-2 applicable)
+          items:
+            $ref: '#/components/schemas/ParrainRequest'
+        paiement:
+          $ref: '#/components/schemas/PaiementAdmissionRequest'
       required:
         - collectiviteDestinationId
         - dateTransfert
+        - parrains
+        - paiement
 
     Mandat:
       type: object
@@ -2110,6 +2327,119 @@ components:
           type: number
           description: Montant des cotisations attendues mais non payées sur la période (en MGA)
 
+    AssiduiteCollectivite:
+      type: object
+      description: Taux d'assiduité global d'une collectivité sur une période
+      properties:
+        collectiviteId:
+          type: string
+          format: uuid
+        nomCollectivite:
+          type: string
+        tauxAssiduiteMoyenPercent:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 100
+          description: Taux d'assiduité global de la collectivité en %
+        nombreActivitesTenues:
+          type: integer
+        nombreMembresActifs:
+          type: integer
+
+    CotisationStatCollectivite:
+      type: object
+      description: Taux de membres à jour dans leurs cotisations pour une collectivité
+      properties:
+        collectiviteId:
+          type: string
+          format: uuid
+        nomCollectivite:
+          type: string
+        pourcentageMembresAJourPercent:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 100
+          description: Pourcentage global de membres à jour dans leurs cotisations
+        nombreMembresAJour:
+          type: integer
+        nombreMembresTotal:
+          type: integer
+
+    AdhesionStatCollectivite:
+      type: object
+      description: Nombre de nouveaux adhérents pour une collectivité sur une période
+      properties:
+        collectiviteId:
+          type: string
+          format: uuid
+        nomCollectivite:
+          type: string
+        nombreNouveauxAdherents:
+          type: integer
+
+    RapportMensuelFederation:
+      type: object
+      description: |
+        Rapport mensuel global établi par le secrétaire de la fédération.
+        Contient les 3 indicateurs H : assiduité, cotisations à jour, nouveaux adhérents.
+      properties:
+        mois:
+          type: integer
+          minimum: 1
+          maximum: 12
+        annee:
+          type: integer
+        dateGeneration:
+          type: string
+          format: date-time
+          readOnly: true
+        assiduiteParCollectivite:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssiduiteCollectivite'
+        cotisationsParCollectivite:
+          type: array
+          items:
+            $ref: '#/components/schemas/CotisationStatCollectivite'
+        adhesionsParCollectivite:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdhesionStatCollectivite'
+
+    RapportAnnuelFederation:
+      type: object
+      description: |
+        Rapport annuel présenté lors des assemblées générales.
+        Agrège les données des 12 mois et établit des classements par collectivité.
+      properties:
+        annee:
+          type: integer
+        dateGeneration:
+          type: string
+          format: date-time
+          readOnly: true
+        rapportsMensuels:
+          type: array
+          description: Agrégation des rapports mensuels (12 entrées maximum)
+          items:
+            $ref: '#/components/schemas/RapportMensuelFederation'
+        classementAssiduite:
+          type: array
+          description: Collectivités classées par taux d'assiduité annuel décroissant
+          items:
+            $ref: '#/components/schemas/AssiduiteCollectivite'
+        classementCotisations:
+          type: array
+          description: Collectivités classées par pourcentage de membres à jour décroissant
+          items:
+            $ref: '#/components/schemas/CotisationStatCollectivite'
+        classementAdhesions:
+          type: array
+          description: Collectivités classées par nombre de nouveaux adhérents décroissant
+          items:
+            $ref: '#/components/schemas/AdhesionStatCollectivite'
 
     Federation:
       type: object
@@ -2143,26 +2473,22 @@ components:
       required:
         - pourcentageCotisationReversePercent
 
-    ErrorResponse:
+    Page:
       type: object
+      description: Enveloppe de pagination commune
       properties:
-        code:
-          type: string
-          description: Code d'erreur métier
-          example: "PARRAIN_INELIGIBLE"
-        message:
-          type: string
-          description: Message d'erreur lisible
-          example: "Le parrain désigné ne remplit pas les conditions requises."
-        details:
-          type: array
-          items:
-            type: object
-            properties:
-              champ:
-                type: string
-              probleme:
-                type: string
+        page:
+          type: integer
+          description: Numéro de la page courante
+        taille:
+          type: integer
+          description: Nombre d'éléments par page
+        totalElements:
+          type: integer
+          description: Nombre total d'éléments
+        totalPages:
+          type: integer
+          description: Nombre total de pages
 
     PageCollectivite:
       allOf:
@@ -2214,19 +2540,53 @@ components:
               items:
                 $ref: '#/components/schemas/StatistiquesMembre'
 
-    Page:
+    PageAssiduiteCollectivite:
+      allOf:
+        - $ref: '#/components/schemas/Page'
+        - type: object
+          properties:
+            contenu:
+              type: array
+              items:
+                $ref: '#/components/schemas/AssiduiteCollectivite'
+
+    PageCotisationStatCollectivite:
+      allOf:
+        - $ref: '#/components/schemas/Page'
+        - type: object
+          properties:
+            contenu:
+              type: array
+              items:
+                $ref: '#/components/schemas/CotisationStatCollectivite'
+
+    PageAdhesionStatCollectivite:
+      allOf:
+        - $ref: '#/components/schemas/Page'
+        - type: object
+          properties:
+            contenu:
+              type: array
+              items:
+                $ref: '#/components/schemas/AdhesionStatCollectivite'
+
+    ErrorResponse:
       type: object
-      description: Enveloppe de pagination commune
       properties:
-        page:
-          type: integer
-          description: Numéro de la page courante
-        taille:
-          type: integer
-          description: Nombre d'éléments par page
-        totalElements:
-          type: integer
-          description: Nombre total d'éléments
-        totalPages:
-          type: integer
-          description: Nombre total de pages
+        code:
+          type: string
+          description: Code d'erreur métier
+          example: "PARRAINS_INSUFFISANTS"
+        message:
+          type: string
+          description: Message d'erreur lisible
+          example: "Le nombre de parrains issus de la collectivité cible est insuffisant."
+        details:
+          type: array
+          items:
+            type: object
+            properties:
+              champ:
+                type: string
+              probleme:
+                type: string
