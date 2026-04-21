@@ -1,21 +1,19 @@
 package mg.haja.federationagricole.Entity;
-
-import jakarta.persistence.*;
-
-@Entity
 public class MandatePosition {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
-
-    @ManyToOne
     private Mandate mandate;
-
-    @ManyToOne
     private Member member;
-
     private String position;
+
+    public MandatePosition() {
+    }
+
+    public MandatePosition(int id, Mandate mandate, Member member, String position) {
+        this.id = id;
+        this.mandate = mandate;
+        this.member = member;
+        this.position = position;
+    }
 
     public int getId() {
         return id;

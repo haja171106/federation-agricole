@@ -1,14 +1,15 @@
 package mg.haja.federationagricole.Entity;
-
-public class Mandate {
+public class Membership {
     private int id;
+    private Member member;
     private Collectivity collectivity;
 
-    public Mandate() {
+    public Membership() {
     }
 
-    public Mandate(int id, Collectivity collectivity) {
+    public Membership(int id, Member member, Collectivity collectivity) {
         this.id = id;
+        this.member = member;
         this.collectivity = collectivity;
     }
 
@@ -18,6 +19,14 @@ public class Mandate {
 
     public void setId(int id) {
         this.id = id;
+    }
+
+    public Member getMember() {
+        return member;
+    }
+
+    public void setMember(Member member) {
+        this.member = member;
     }
 
     public Collectivity getCollectivity() {
