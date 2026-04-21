@@ -1,17 +1,18 @@
 package mg.haja.federationagricole.Entity;
 
+
 public class Presence {
     private int id;
     private Activity activity;
     private Member member;
     private String status;
-    private Boolean visitor;
+    private boolean visitor;
     private String absenceReason;
 
     public Presence() {
     }
 
-    public Presence(int id, Activity activity, Member member, String status, Boolean visitor, String absenceReason) {
+    public Presence(int id, Activity activity, Member member, String status, boolean visitor, String absenceReason) {
         this.id = id;
         this.activity = activity;
         this.member = member;
@@ -24,44 +25,44 @@ public class Presence {
         return id;
     }
 
-    public void setId(int id) {
-        this.id = id;
-    }
-
     public Activity getActivity() {
         return activity;
-    }
-
-    public void setActivity(Activity activity) {
-        this.activity = activity;
     }
 
     public Member getMember() {
         return member;
     }
 
-    public void setMember(Member member) {
-        this.member = member;
-    }
-
     public String getStatus() {
         return status;
+    }
+
+    public boolean isVisitor() {
+        return visitor;
+    }
+
+    public String getAbsenceReason() {
+        return absenceReason;
+    }
+
+    public void setId(int id) {
+        this.id = id;
+    }
+
+    public void setActivity(Activity activity) {
+        this.activity = activity;
+    }
+
+    public void setMember(Member member) {
+        this.member = member;
     }
 
     public void setStatus(String status) {
         this.status = status;
     }
 
-    public Boolean getVisitor() {
-        return visitor;
-    }
-
-    public void setVisitor(Boolean visitor) {
+    public void setVisitor(boolean visitor) {
         this.visitor = visitor;
-    }
-
-    public String getAbsenceReason() {
-        return absenceReason;
     }
 
     public void setAbsenceReason(String absenceReason) {

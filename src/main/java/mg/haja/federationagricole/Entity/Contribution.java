@@ -1,5 +1,6 @@
 package mg.haja.federationagricole.Entity;
 
+
 import java.time.LocalDate;
 
 public class Contribution {
@@ -34,68 +35,68 @@ public class Contribution {
         return id;
     }
 
-    public void setId(int id) {
-        this.id = id;
-    }
-
     public Collectivity getCollectivity() {
         return collectivity;
-    }
-
-    public void setCollectivity(Collectivity collectivity) {
-        this.collectivity = collectivity;
     }
 
     public Member getMember() {
         return member;
     }
 
-    public void setMember(Member member) {
-        this.member = member;
-    }
-
     public double getAmount() {
         return amount;
-    }
-
-    public void setAmount(double amount) {
-        this.amount = amount;
     }
 
     public LocalDate getCollectionDate() {
         return collectionDate;
     }
 
-    public void setCollectionDate(LocalDate collectionDate) {
-        this.collectionDate = collectionDate;
-    }
-
     public String getPaymentMode() {
         return paymentMode;
-    }
-
-    public void setPaymentMode(String paymentMode) {
-        this.paymentMode = paymentMode;
     }
 
     public String getType() {
         return type;
     }
 
-    public void setType(String type) {
-        this.type = type;
-    }
-
     public String getReason() {
         return reason;
     }
 
-    public void setReason(String reason) {
-        this.reason = reason;
-    }
-
     public double getFederationAmount() {
         return federationAmount;
+    }
+
+    public void setId(int id) {
+        this.id = id;
+    }
+
+    public void setCollectivity(Collectivity collectivity) {
+        this.collectivity = collectivity;
+    }
+
+    public void setMember(Member member) {
+        this.member = member;
+    }
+
+    public void setAmount(double amount) {
+        this.amount = amount;
+    }
+
+    public void setCollectionDate(LocalDate collectionDate) {
+        this.collectionDate = collectionDate;
+    }
+
+    public void setPaymentMode(String paymentMode) {
+        this.paymentMode = paymentMode;
+    }
+
+    public void setType(String type) {
+        this.type = type;
+    }
+
+    public void setReason(String reason) {
+        this.reason = reason;
     }
 
     public void setFederationAmount(double federationAmount) {

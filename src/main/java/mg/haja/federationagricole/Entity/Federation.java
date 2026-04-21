@@ -1,5 +1,6 @@
 package mg.haja.federationagricole.Entity;
 
+
 public class Federation {
     private int id;
     private String name;
@@ -18,20 +19,20 @@ public class Federation {
         return id;
     }
 
-    public void setId(int id) {
-        this.id = id;
-    }
-
     public String getName() {
         return name;
     }
 
-    public void setName(String name) {
-        this.name = name;
-    }
-
     public double getReverseContributionRate() {
         return reverseContributionRate;
+    }
+
+    public void setId(int id) {
+        this.id = id;
+    }
+
+    public void setName(String name) {
+        this.name = name;
     }
 
     public void setReverseContributionRate(double reverseContributionRate) {
