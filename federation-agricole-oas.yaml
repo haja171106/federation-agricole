@@ -1,606 +1,659 @@
-openapi: 3.0.3
+openapi: 3.1.0
 info:
-  title: Fédération de Collectivités Agricoles
-  version: 1.0.0
+  title: Agricultural Federation API
+  description: |
+    # Versioning
+    This API uses semantic versioning (MAJOR.MINOR.PATCH). Available versions are :
+    - v0.0.1 (2026-04-21) : POST /collectivities for collectivities creation and POST /members for members creation.
+    - v0.0.2 (2026-04-21) : Full CRUD on collectivities, members, mandates, contributions, accounts, activities, attendances and statistics.
+  version: 0.0.2
 
 servers:
   - url: http://localhost:8080
 
 tags:
-  - name: Collectivités
-  - name: Membres
-  - name: Mandats
-  - name: Cotisations
-  - name: Comptes
-  - name: Activités
-  - name: Présences
-  - name: Statistiques
-  - name: Fédération
+  - name: Collectivities
+  - name: Members
+  - name: Mandates
+  - name: Contributions
+  - name: Accounts
+  - name: Activities
+  - name: Attendances
+  - name: Statistics
+  - name: Federation
 
 paths:
 
-  /collectivites:
+  # ── A. COLLECTIVITIES ─────────────────────────────────────────
+  /collectivities:
     get:
-      tags: [Collectivités]
-      summary: Lister les collectivités
-      operationId: listCollectivites
+      tags: [Collectivities]
+      summary: List collectivities
+      operationId: listCollectivities
       parameters:
-        - {name: ville, in: query, schema: {type: string}}
-        - {name: specialite, in: query, schema: {type: string}}
+        - {name: location, in: query, schema: {type: string}}
+        - {name: specialty, in: query, schema: {type: string}}
         - $ref: '#/components/parameters/page'
         - $ref: '#/components/parameters/size'
       responses:
-        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/PageCollectivite'}}}}
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/PageCollectivity'}}}}
 
     post:
-      tags: [Collectivités]
-      summary: Créer une collectivité
-      operationId: createCollectivite
+      tags: [Collectivities]
+      summary: Create list of collectivities
+      description: |
+        During collectivity request body creation, only members ID are provided to identify members.
+        But the response content includes members information, not only their IDs.
+      operationId: createCollectivities
       requestBody:
         required: true
         content:
           application/json:
-            schema: {$ref: '#/components/schemas/CollectiviteRequest'}
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/CreateCollectivity'
       responses:
-        '201': {description: Créé, content: {application/json: {schema: {$ref: '#/components/schemas/Collectivite'}}}}
-        '422': {$ref: '#/components/responses/UnprocessableEntity'}
+        '201':
+          description: List of created collectivities
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Collectivity'
+        '400':
+          description: Collectivity without federation approval or structure missing.
+        '404':
+          description: Member not found.
 
-  /collectivites/{id}:
+  /collectivities/{id}:
     parameters:
       - $ref: '#/components/parameters/id'
     get:
-      tags: [Collectivités]
-      summary: Obtenir une collectivité
-      operationId: getCollectivite
+      tags: [Collectivities]
+      summary: Get a collectivity
+      operationId: getCollectivity
       responses:
-        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/Collectivite'}}}}
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/Collectivity'}}}}
         '404': {$ref: '#/components/responses/NotFound'}
     put:
-      tags: [Collectivités]
-      summary: Modifier une collectivité
-      operationId: updateCollectivite
+      tags: [Collectivities]
+      summary: Update a collectivity
+      operationId: updateCollectivity
       requestBody:
         required: true
         content:
           application/json:
-            schema: {$ref: '#/components/schemas/CollectiviteRequest'}
+            schema: {$ref: '#/components/schemas/CreateCollectivity'}
       responses:
-        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/Collectivite'}}}}
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/Collectivity'}}}}
         '404': {$ref: '#/components/responses/NotFound'}
 
-  /collectivites/{id}/autorisation:
+  /collectivities/{id}/approval:
     parameters:
       - $ref: '#/components/parameters/id'
     post:
-      tags: [Collectivités]
-      summary: Accorder ou refuser l'ouverture
-      operationId: autoriserCollectivite
+      tags: [Collectivities]
+      summary: Grant or deny federation approval
+      operationId: approveCollectivity
       requestBody:
         required: true
         content:
           application/json:
-            schema: {$ref: '#/components/schemas/AutorisationRequest'}
+            schema: {$ref: '#/components/schemas/ApprovalRequest'}
       responses:
-        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/Collectivite'}}}}
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/Collectivity'}}}}
         '404': {$ref: '#/components/responses/NotFound'}
 
-  /collectivites/{id}/membres:
+  # ── B. MEMBERS ────────────────────────────────────────────────
+  /members:
+    post:
+      tags: [Members]
+      summary: Create list of members
+      description: |
+        The following cases must return a bad request exception :
+        - Member with bad referees or without proper payment.
+        - Membership dues not paid or registration fee not paid.
+      operationId: createMembers
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/CreateMember'
+      responses:
+        '201':
+          description: List of created members
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Member'
+        '400':
+          description: |
+            The following cases must return a bad request exception :
+            - Member with bad referees or without proper payment.
+            - Membership dues not paid or registration fee not paid.
+        '404':
+          description: Either collectivity or member not found.
+
+  /collectivities/{id}/members:
     parameters:
       - $ref: '#/components/parameters/id'
     get:
-      tags: [Membres]
-      summary: Lister les membres d'une collectivité
-      operationId: listMembres
+      tags: [Members]
+      summary: List members of a collectivity
+      operationId: listMembers
       parameters:
-        - {name: poste, in: query, schema: {$ref: '#/components/schemas/Poste'}}
-        - {name: actif, in: query, schema: {type: boolean}}
+        - {name: occupation, in: query, schema: {$ref: '#/components/schemas/MemberOccupation'}}
+        - {name: active, in: query, schema: {type: boolean}}
         - $ref: '#/components/parameters/page'
         - $ref: '#/components/parameters/size'
       responses:
-        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/PageMembre'}}}}
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/PageMember'}}}}
         '404': {$ref: '#/components/responses/NotFound'}
-    post:
-      tags: [Membres]
-      summary: Admettre un membre
-      operationId: admettreMembreCollectivite
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: {$ref: '#/components/schemas/AdmissionRequest'}
-      responses:
-        '201': {description: Créé, content: {application/json: {schema: {$ref: '#/components/schemas/Membre'}}}}
-        '422': {$ref: '#/components/responses/UnprocessableEntity'}
 
-  /collectivites/{id}/membres/{membreId}:
+  /collectivities/{id}/members/{memberId}:
     parameters:
       - $ref: '#/components/parameters/id'
-      - {name: membreId, in: path, required: true, schema: {type: string, format: uuid}}
+      - {name: memberId, in: path, required: true, schema: {type: string}}
     get:
-      tags: [Membres]
-      summary: Obtenir un membre
-      operationId: getMembre
+      tags: [Members]
+      summary: Get a member
+      operationId: getMember
       responses:
-        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/Membre'}}}}
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/Member'}}}}
         '404': {$ref: '#/components/responses/NotFound'}
     delete:
-      tags: [Membres]
-      summary: Démissionner un membre
-      operationId: demissionnerMembre
+      tags: [Members]
+      summary: Resign a member
+      operationId: resignMember
       requestBody:
         required: true
         content:
           application/json:
-            schema: {$ref: '#/components/schemas/DemissionRequest'}
+            schema: {$ref: '#/components/schemas/ResignRequest'}
       responses:
-        '204': {description: Démission enregistrée}
+        '204': {description: Resignation registered}
         '404': {$ref: '#/components/responses/NotFound'}
 
-  /membres/{membreId}/transfert:
+  /members/{memberId}/transfer:
     parameters:
-      - {name: membreId, in: path, required: true, schema: {type: string, format: uuid}}
+      - {name: memberId, in: path, required: true, schema: {type: string}}
     post:
-      tags: [Membres]
-      summary: Transférer un membre vers une autre collectivité
-      operationId: transfererMembre
+      tags: [Members]
+      summary: Transfer a member to another collectivity
+      operationId: transferMember
       requestBody:
         required: true
         content:
           application/json:
-            schema: {$ref: '#/components/schemas/TransfertRequest'}
+            schema: {$ref: '#/components/schemas/TransferRequest'}
       responses:
-        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/Membre'}}}}
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/Member'}}}}
         '422': {$ref: '#/components/responses/UnprocessableEntity'}
 
-  /collectivites/{id}/mandats:
+  # ── MANDATES ──────────────────────────────────────────────────
+  /collectivities/{id}/mandates:
     parameters:
       - $ref: '#/components/parameters/id'
     get:
-      tags: [Mandats]
-      summary: Lister les mandats d'une collectivité
-      operationId: listMandats
+      tags: [Mandates]
+      summary: List mandates of a collectivity
+      operationId: listMandates
       parameters:
-        - {name: annee, in: query, schema: {type: integer}}
+        - {name: year, in: query, schema: {type: integer}}
       responses:
-        '200': {description: OK, content: {application/json: {schema: {type: array, items: {$ref: '#/components/schemas/Mandat'}}}}}
+        '200': {description: OK, content: {application/json: {schema: {type: array, items: {$ref: '#/components/schemas/Mandate'}}}}}
     post:
-      tags: [Mandats]
-      summary: Créer un mandat annuel
-      operationId: createMandat
+      tags: [Mandates]
+      summary: Create an annual mandate
+      operationId: createMandate
       requestBody:
         required: true
         content:
           application/json:
-            schema: {$ref: '#/components/schemas/MandatRequest'}
+            schema: {$ref: '#/components/schemas/CreateMandate'}
       responses:
-        '201': {description: Créé, content: {application/json: {schema: {$ref: '#/components/schemas/Mandat'}}}}
+        '201': {description: Created, content: {application/json: {schema: {$ref: '#/components/schemas/Mandate'}}}}
         '422': {$ref: '#/components/responses/UnprocessableEntity'}
 
-  /collectivites/{id}/mandats/{mandatId}:
+  /collectivities/{id}/mandates/{mandateId}:
     parameters:
       - $ref: '#/components/parameters/id'
-      - {name: mandatId, in: path, required: true, schema: {type: string, format: uuid}}
+      - {name: mandateId, in: path, required: true, schema: {type: string}}
     get:
-      tags: [Mandats]
-      summary: Obtenir un mandat
-      operationId: getMandat
+      tags: [Mandates]
+      summary: Get a mandate
+      operationId: getMandate
       responses:
-        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/Mandat'}}}}
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/Mandate'}}}}
         '404': {$ref: '#/components/responses/NotFound'}
 
-  /collectivites/{id}/cotisations:
+  # ── C. CONTRIBUTIONS ──────────────────────────────────────────
+  /collectivities/{id}/contributions:
     parameters:
       - $ref: '#/components/parameters/id'
     get:
-      tags: [Cotisations]
-      summary: Lister les cotisations
-      operationId: listCotisations
+      tags: [Contributions]
+      summary: List contributions of a collectivity
+      operationId: listContributions
       parameters:
-        - {name: membreId, in: query, schema: {type: string, format: uuid}}
-        - {name: type, in: query, schema: {$ref: '#/components/schemas/TypeCotisation'}}
-        - {name: dateDebut, in: query, schema: {type: string, format: date}}
-        - {name: dateFin, in: query, schema: {type: string, format: date}}
+        - {name: memberId, in: query, schema: {type: string}}
+        - {name: type, in: query, schema: {$ref: '#/components/schemas/ContributionType'}}
+        - {name: startDate, in: query, schema: {type: string, format: date}}
+        - {name: endDate, in: query, schema: {type: string, format: date}}
         - $ref: '#/components/parameters/page'
         - $ref: '#/components/parameters/size'
       responses:
-        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/PageCotisation'}}}}
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/PageContribution'}}}}
     post:
-      tags: [Cotisations]
-      summary: Enregistrer un encaissement
-      operationId: enregistrerCotisation
+      tags: [Contributions]
+      summary: Record a contribution payment
+      operationId: recordContribution
       requestBody:
         required: true
         content:
           application/json:
-            schema: {$ref: '#/components/schemas/CotisationRequest'}
+            schema: {$ref: '#/components/schemas/CreateContribution'}
       responses:
-        '201': {description: Créé, content: {application/json: {schema: {$ref: '#/components/schemas/Cotisation'}}}}
+        '201': {description: Created, content: {application/json: {schema: {$ref: '#/components/schemas/Contribution'}}}}
         '422': {$ref: '#/components/responses/UnprocessableEntity'}
 
-  /collectivites/{id}/cotisations/{cotisationId}:
+  /collectivities/{id}/contributions/{contributionId}:
     parameters:
       - $ref: '#/components/parameters/id'
-      - {name: cotisationId, in: path, required: true, schema: {type: string, format: uuid}}
+      - {name: contributionId, in: path, required: true, schema: {type: string}}
     get:
-      tags: [Cotisations]
-      summary: Obtenir une cotisation
-      operationId: getCotisation
+      tags: [Contributions]
+      summary: Get a contribution
+      operationId: getContribution
       responses:
-        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/Cotisation'}}}}
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/Contribution'}}}}
         '404': {$ref: '#/components/responses/NotFound'}
 
-  /collectivites/{id}/comptes:
+  # ── D. ACCOUNTS ───────────────────────────────────────────────
+  /collectivities/{id}/accounts:
     parameters:
       - $ref: '#/components/parameters/id'
     get:
-      tags: [Comptes]
-      summary: Lister les comptes d'une collectivité
-      operationId: listComptesCollectivite
+      tags: [Accounts]
+      summary: List accounts of a collectivity
+      operationId: listAccountsCollectivity
       parameters:
-        - {name: type, in: query, schema: {$ref: '#/components/schemas/TypeCompte'}}
+        - {name: type, in: query, schema: {$ref: '#/components/schemas/AccountType'}}
       responses:
-        '200': {description: OK, content: {application/json: {schema: {type: array, items: {$ref: '#/components/schemas/Compte'}}}}}
+        '200': {description: OK, content: {application/json: {schema: {type: array, items: {$ref: '#/components/schemas/Account'}}}}}
     post:
-      tags: [Comptes]
-      summary: Créer un compte
-      operationId: createCompteCollectivite
+      tags: [Accounts]
+      summary: Create an account
+      operationId: createAccountCollectivity
       requestBody:
         required: true
         content:
           application/json:
-            schema: {$ref: '#/components/schemas/CompteRequest'}
+            schema: {$ref: '#/components/schemas/CreateAccount'}
       responses:
-        '201': {description: Créé, content: {application/json: {schema: {$ref: '#/components/schemas/Compte'}}}}
+        '201': {description: Created, content: {application/json: {schema: {$ref: '#/components/schemas/Account'}}}}
         '422': {$ref: '#/components/responses/UnprocessableEntity'}
 
-  /collectivites/{id}/comptes/{compteId}:
+  /collectivities/{id}/accounts/{accountId}:
     parameters:
       - $ref: '#/components/parameters/id'
-      - {name: compteId, in: path, required: true, schema: {type: string, format: uuid}}
+      - {name: accountId, in: path, required: true, schema: {type: string}}
     get:
-      tags: [Comptes]
-      summary: Obtenir un compte
-      operationId: getCompteCollectivite
+      tags: [Accounts]
+      summary: Get an account
+      operationId: getAccountCollectivity
       responses:
-        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/Compte'}}}}
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/Account'}}}}
         '404': {$ref: '#/components/responses/NotFound'}
     put:
-      tags: [Comptes]
-      summary: Mettre à jour le solde
-      operationId: updateCompteCollectivite
+      tags: [Accounts]
+      summary: Update account balance
+      operationId: updateAccountCollectivity
       requestBody:
         required: true
         content:
           application/json:
-            schema: {$ref: '#/components/schemas/CompteUpdateRequest'}
+            schema: {$ref: '#/components/schemas/UpdateAccountBalance'}
       responses:
-        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/Compte'}}}}
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/Account'}}}}
         '404': {$ref: '#/components/responses/NotFound'}
 
-  /federation/comptes:
+  /federation/accounts:
     get:
-      tags: [Fédération]
-      summary: Lister les comptes de la fédération
-      operationId: listComptesFederation
+      tags: [Federation]
+      summary: List federation accounts
+      operationId: listAccountsFederation
       parameters:
-        - {name: type, in: query, schema: {$ref: '#/components/schemas/TypeCompte'}}
+        - {name: type, in: query, schema: {$ref: '#/components/schemas/AccountType'}}
       responses:
-        '200': {description: OK, content: {application/json: {schema: {type: array, items: {$ref: '#/components/schemas/Compte'}}}}}
+        '200': {description: OK, content: {application/json: {schema: {type: array, items: {$ref: '#/components/schemas/Account'}}}}}
     post:
-      tags: [Fédération]
-      summary: Créer un compte de la fédération
-      operationId: createCompteFederation
+      tags: [Federation]
+      summary: Create a federation account
+      operationId: createAccountFederation
       requestBody:
         required: true
         content:
           application/json:
-            schema: {$ref: '#/components/schemas/CompteRequest'}
+            schema: {$ref: '#/components/schemas/CreateAccount'}
       responses:
-        '201': {description: Créé, content: {application/json: {schema: {$ref: '#/components/schemas/Compte'}}}}
+        '201': {description: Created, content: {application/json: {schema: {$ref: '#/components/schemas/Account'}}}}
         '422': {$ref: '#/components/responses/UnprocessableEntity'}
 
-  /federation/comptes/{compteId}:
+  /federation/accounts/{accountId}:
     parameters:
-      - {name: compteId, in: path, required: true, schema: {type: string, format: uuid}}
+      - {name: accountId, in: path, required: true, schema: {type: string}}
     get:
-      tags: [Fédération]
-      summary: Obtenir un compte de la fédération
-      operationId: getCompteFederation
+      tags: [Federation]
+      summary: Get a federation account
+      operationId: getAccountFederation
       responses:
-        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/Compte'}}}}
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/Account'}}}}
         '404': {$ref: '#/components/responses/NotFound'}
     put:
-      tags: [Fédération]
-      summary: Mettre à jour le solde
-      operationId: updateCompteFederation
+      tags: [Federation]
+      summary: Update federation account balance
+      operationId: updateAccountFederation
       requestBody:
         required: true
         content:
           application/json:
-            schema: {$ref: '#/components/schemas/CompteUpdateRequest'}
+            schema: {$ref: '#/components/schemas/UpdateAccountBalance'}
       responses:
-        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/Compte'}}}}
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/Account'}}}}
         '404': {$ref: '#/components/responses/NotFound'}
 
-  /collectivites/{id}/calendrier:
+  # ── E. ACTIVITIES ─────────────────────────────────────────────
+  /collectivities/{id}/schedule:
     parameters:
       - $ref: '#/components/parameters/id'
     get:
-      tags: [Activités]
-      summary: Obtenir le calendrier annuel
-      operationId: getCalendrier
+      tags: [Activities]
+      summary: Get annual schedule
+      operationId: getSchedule
       parameters:
-        - {name: annee, in: query, required: true, schema: {type: integer}}
+        - {name: year, in: query, required: true, schema: {type: integer}}
       responses:
-        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/Calendrier'}}}}
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/Schedule'}}}}
         '404': {$ref: '#/components/responses/NotFound'}
     put:
-      tags: [Activités]
-      summary: Définir les règles de récurrence
-      operationId: setCalendrier
+      tags: [Activities]
+      summary: Define recurrence rules
+      operationId: setSchedule
       requestBody:
         required: true
         content:
           application/json:
-            schema: {$ref: '#/components/schemas/CalendrierRequest'}
+            schema: {$ref: '#/components/schemas/CreateSchedule'}
       responses:
-        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/Calendrier'}}}}
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/Schedule'}}}}
 
-  /collectivites/{id}/activites:
+  /collectivities/{id}/activities:
     parameters:
       - $ref: '#/components/parameters/id'
     get:
-      tags: [Activités]
-      summary: Lister les activités d'une collectivité
-      operationId: listActivites
+      tags: [Activities]
+      summary: List activities of a collectivity
+      operationId: listActivities
       parameters:
-        - {name: type, in: query, schema: {$ref: '#/components/schemas/TypeActivite'}}
-        - {name: dateDebut, in: query, schema: {type: string, format: date}}
-        - {name: dateFin, in: query, schema: {type: string, format: date}}
+        - {name: type, in: query, schema: {$ref: '#/components/schemas/ActivityType'}}
+        - {name: startDate, in: query, schema: {type: string, format: date}}
+        - {name: endDate, in: query, schema: {type: string, format: date}}
         - $ref: '#/components/parameters/page'
         - $ref: '#/components/parameters/size'
       responses:
-        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/PageActivite'}}}}
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/PageActivity'}}}}
     post:
-      tags: [Activités]
-      summary: Planifier une activité exceptionnelle
-      operationId: createActivite
+      tags: [Activities]
+      summary: Plan an exceptional activity
+      operationId: createActivity
       requestBody:
         required: true
         content:
           application/json:
-            schema: {$ref: '#/components/schemas/ActiviteRequest'}
+            schema: {$ref: '#/components/schemas/CreateActivity'}
       responses:
-        '201': {description: Créé, content: {application/json: {schema: {$ref: '#/components/schemas/Activite'}}}}
+        '201': {description: Created, content: {application/json: {schema: {$ref: '#/components/schemas/Activity'}}}}
         '422': {$ref: '#/components/responses/UnprocessableEntity'}
 
-  /collectivites/{id}/activites/{activiteId}:
+  /collectivities/{id}/activities/{activityId}:
     parameters:
       - $ref: '#/components/parameters/id'
-      - {name: activiteId, in: path, required: true, schema: {type: string, format: uuid}}
+      - {name: activityId, in: path, required: true, schema: {type: string}}
     get:
-      tags: [Activités]
-      summary: Obtenir une activité
-      operationId: getActivite
+      tags: [Activities]
+      summary: Get an activity
+      operationId: getActivity
       responses:
-        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/Activite'}}}}
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/Activity'}}}}
         '404': {$ref: '#/components/responses/NotFound'}
     put:
-      tags: [Activités]
-      summary: Modifier une activité
-      operationId: updateActivite
+      tags: [Activities]
+      summary: Update an activity
+      operationId: updateActivity
       requestBody:
         required: true
         content:
           application/json:
-            schema: {$ref: '#/components/schemas/ActiviteRequest'}
+            schema: {$ref: '#/components/schemas/CreateActivity'}
       responses:
-        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/Activite'}}}}
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/Activity'}}}}
         '404': {$ref: '#/components/responses/NotFound'}
     delete:
-      tags: [Activités]
-      summary: Supprimer une activité
-      operationId: deleteActivite
+      tags: [Activities]
+      summary: Delete an activity
+      operationId: deleteActivity
       responses:
-        '204': {description: Supprimé}
+        '204': {description: Deleted}
         '404': {$ref: '#/components/responses/NotFound'}
 
-  /federation/activites:
+  /federation/activities:
     get:
-      tags: [Fédération]
-      summary: Lister les activités de la fédération
-      operationId: listActivitesFederation
+      tags: [Federation]
+      summary: List federation activities
+      operationId: listFederationActivities
       parameters:
-        - {name: dateDebut, in: query, schema: {type: string, format: date}}
-        - {name: dateFin, in: query, schema: {type: string, format: date}}
+        - {name: startDate, in: query, schema: {type: string, format: date}}
+        - {name: endDate, in: query, schema: {type: string, format: date}}
         - $ref: '#/components/parameters/page'
         - $ref: '#/components/parameters/size'
       responses:
-        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/PageActivite'}}}}
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/PageActivity'}}}}
     post:
-      tags: [Fédération]
-      summary: Planifier une activité nationale
-      operationId: createActiviteFederation
+      tags: [Federation]
+      summary: Plan a national activity
+      operationId: createFederationActivity
       requestBody:
         required: true
         content:
           application/json:
-            schema: {$ref: '#/components/schemas/ActiviteFederationRequest'}
+            schema: {$ref: '#/components/schemas/CreateFederationActivity'}
       responses:
-        '201': {description: Créé, content: {application/json: {schema: {$ref: '#/components/schemas/Activite'}}}}
+        '201': {description: Created, content: {application/json: {schema: {$ref: '#/components/schemas/Activity'}}}}
         '422': {$ref: '#/components/responses/UnprocessableEntity'}
 
-  /federation/activites/{activiteId}:
+  /federation/activities/{activityId}:
     parameters:
-      - {name: activiteId, in: path, required: true, schema: {type: string, format: uuid}}
+      - {name: activityId, in: path, required: true, schema: {type: string}}
     get:
-      tags: [Fédération]
-      summary: Obtenir une activité de la fédération
-      operationId: getActiviteFederation
+      tags: [Federation]
+      summary: Get a federation activity
+      operationId: getFederationActivity
       responses:
-        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/Activite'}}}}
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/Activity'}}}}
         '404': {$ref: '#/components/responses/NotFound'}
     put:
-      tags: [Fédération]
-      summary: Modifier une activité de la fédération
-      operationId: updateActiviteFederation
+      tags: [Federation]
+      summary: Update a federation activity
+      operationId: updateFederationActivity
       requestBody:
         required: true
         content:
           application/json:
-            schema: {$ref: '#/components/schemas/ActiviteFederationRequest'}
+            schema: {$ref: '#/components/schemas/CreateFederationActivity'}
       responses:
-        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/Activite'}}}}
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/Activity'}}}}
         '404': {$ref: '#/components/responses/NotFound'}
     delete:
-      tags: [Fédération]
-      summary: Supprimer une activité de la fédération
-      operationId: deleteActiviteFederation
+      tags: [Federation]
+      summary: Delete a federation activity
+      operationId: deleteFederationActivity
       responses:
-        '204': {description: Supprimé}
+        '204': {description: Deleted}
         '404': {$ref: '#/components/responses/NotFound'}
 
-  /activites/{activiteId}/presences:
+  # ── F. ATTENDANCES ────────────────────────────────────────────
+  /activities/{activityId}/attendances:
     parameters:
-      - {name: activiteId, in: path, required: true, schema: {type: string, format: uuid}}
+      - {name: activityId, in: path, required: true, schema: {type: string}}
     get:
-      tags: [Présences]
-      summary: Fiche de présence d'une activité
-      operationId: listPresences
+      tags: [Attendances]
+      summary: Get attendance sheet of an activity
+      operationId: listAttendances
       responses:
-        '200': {description: OK, content: {application/json: {schema: {type: array, items: {$ref: '#/components/schemas/Presence'}}}}}
+        '200': {description: OK, content: {application/json: {schema: {type: array, items: {$ref: '#/components/schemas/Attendance'}}}}}
     post:
-      tags: [Présences]
-      summary: Enregistrer une présence
-      operationId: enregistrerPresence
+      tags: [Attendances]
+      summary: Record a member attendance
+      operationId: recordAttendance
       requestBody:
         required: true
         content:
           application/json:
-            schema: {$ref: '#/components/schemas/PresenceRequest'}
+            schema: {$ref: '#/components/schemas/CreateAttendance'}
       responses:
-        '201': {description: Créé, content: {application/json: {schema: {$ref: '#/components/schemas/Presence'}}}}
-        '409': {description: Présence déjà enregistrée}
+        '201': {description: Created, content: {application/json: {schema: {$ref: '#/components/schemas/Attendance'}}}}
+        '409': {description: Attendance already recorded}
 
-  /activites/{activiteId}/presences/{membreId}:
+  /activities/{activityId}/attendances/{memberId}:
     parameters:
-      - {name: activiteId, in: path, required: true, schema: {type: string, format: uuid}}
-      - {name: membreId, in: path, required: true, schema: {type: string, format: uuid}}
+      - {name: activityId, in: path, required: true, schema: {type: string}}
+      - {name: memberId, in: path, required: true, schema: {type: string}}
     get:
-      tags: [Présences]
-      summary: Obtenir la présence d'un membre
-      operationId: getPresence
+      tags: [Attendances]
+      summary: Get attendance of a member
+      operationId: getAttendance
       responses:
-        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/Presence'}}}}
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/Attendance'}}}}
         '404': {$ref: '#/components/responses/NotFound'}
     put:
-      tags: [Présences]
-      summary: Mettre à jour une présence
-      operationId: updatePresence
+      tags: [Attendances]
+      summary: Update attendance
+      operationId: updateAttendance
       requestBody:
         required: true
         content:
           application/json:
-            schema: {$ref: '#/components/schemas/PresenceRequest'}
+            schema: {$ref: '#/components/schemas/CreateAttendance'}
       responses:
-        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/Presence'}}}}
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/Attendance'}}}}
         '404': {$ref: '#/components/responses/NotFound'}
 
-  /collectivites/{id}/statistiques:
+  # ── G. STATISTICS ─────────────────────────────────────────────
+  /collectivities/{id}/statistics:
     parameters:
       - $ref: '#/components/parameters/id'
     get:
-      tags: [Statistiques]
-      summary: Rapport mensuel global
-      operationId: getRapportMensuel
+      tags: [Statistics]
+      summary: Monthly report (for the federation)
+      operationId: getMonthlyReport
       parameters:
-        - {name: mois, in: query, required: true, schema: {type: integer, minimum: 1, maximum: 12}}
-        - {name: annee, in: query, required: true, schema: {type: integer}}
+        - {name: month, in: query, required: true, schema: {type: integer, minimum: 1, maximum: 12}}
+        - {name: year, in: query, required: true, schema: {type: integer}}
       responses:
-        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/StatistiquesCollectivite'}}}}
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/CollectivityStatistics'}}}}
         '404': {$ref: '#/components/responses/NotFound'}
 
-  /collectivites/{id}/statistiques/membres:
+  /collectivities/{id}/statistics/members:
     parameters:
       - $ref: '#/components/parameters/id'
     get:
-      tags: [Statistiques]
-      summary: Statistiques de tous les membres actifs
-      operationId: getStatistiquesMembres
+      tags: [Statistics]
+      summary: Detailed statistics for all active members
+      operationId: getMembersStatistics
       parameters:
-        - {name: dateDebut, in: query, required: true, schema: {type: string, format: date}}
-        - {name: dateFin, in: query, required: true, schema: {type: string, format: date}}
+        - {name: startDate, in: query, required: true, schema: {type: string, format: date}}
+        - {name: endDate, in: query, required: true, schema: {type: string, format: date}}
         - $ref: '#/components/parameters/page'
         - $ref: '#/components/parameters/size'
       responses:
-        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/PageStatMembre'}}}}
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/PageMemberStatistics'}}}}
         '404': {$ref: '#/components/responses/NotFound'}
 
-  /collectivites/{id}/statistiques/membres/{membreId}:
+  /collectivities/{id}/statistics/members/{memberId}:
     parameters:
       - $ref: '#/components/parameters/id'
-      - {name: membreId, in: path, required: true, schema: {type: string, format: uuid}}
+      - {name: memberId, in: path, required: true, schema: {type: string}}
     get:
-      tags: [Statistiques]
-      summary: Statistiques d'un membre spécifique
-      operationId: getStatistiquesMembre
+      tags: [Statistics]
+      summary: Statistics of a specific member
+      operationId: getMemberStatistics
       parameters:
-        - {name: dateDebut, in: query, required: true, schema: {type: string, format: date}}
-        - {name: dateFin, in: query, required: true, schema: {type: string, format: date}}
+        - {name: startDate, in: query, required: true, schema: {type: string, format: date}}
+        - {name: endDate, in: query, required: true, schema: {type: string, format: date}}
       responses:
-        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/StatMembre'}}}}
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/MemberStatistics'}}}}
         '404': {$ref: '#/components/responses/NotFound'}
 
+  # ── FEDERATION ────────────────────────────────────────────────
   /federation:
     get:
-      tags: [Fédération]
-      summary: Obtenir les infos de la fédération
+      tags: [Federation]
+      summary: Get federation info
       operationId: getFederation
       responses:
         '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/Federation'}}}}
     put:
-      tags: [Fédération]
-      summary: Mettre à jour les paramètres
+      tags: [Federation]
+      summary: Update federation settings
       operationId: updateFederation
       requestBody:
         required: true
         content:
           application/json:
-            schema: {$ref: '#/components/schemas/FederationRequest'}
+            schema: {$ref: '#/components/schemas/UpdateFederation'}
       responses:
         '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/Federation'}}}}
 
-  /federation/mandats:
+  /federation/mandates:
     get:
-      tags: [Fédération]
-      summary: Lister les mandats de la fédération
-      operationId: listMandatsFederation
+      tags: [Federation]
+      summary: List federation mandates
+      operationId: listFederationMandates
       responses:
-        '200': {description: OK, content: {application/json: {schema: {type: array, items: {$ref: '#/components/schemas/MandatFederation'}}}}}
+        '200': {description: OK, content: {application/json: {schema: {type: array, items: {$ref: '#/components/schemas/FederationMandate'}}}}}
     post:
-      tags: [Fédération]
-      summary: Créer un mandat de la fédération
-      operationId: createMandatFederation
+      tags: [Federation]
+      summary: Create a federation mandate (2 years)
+      operationId: createFederationMandate
       requestBody:
         required: true
         content:
           application/json:
-            schema: {$ref: '#/components/schemas/MandatFederationRequest'}
+            schema: {$ref: '#/components/schemas/CreateFederationMandate'}
       responses:
-        '201': {description: Créé, content: {application/json: {schema: {$ref: '#/components/schemas/MandatFederation'}}}}
+        '201': {description: Created, content: {application/json: {schema: {$ref: '#/components/schemas/FederationMandate'}}}}
         '422': {$ref: '#/components/responses/UnprocessableEntity'}
 
-  /federation/mandats/{mandatId}:
+  /federation/mandates/{mandateId}:
     parameters:
-      - {name: mandatId, in: path, required: true, schema: {type: string, format: uuid}}
+      - {name: mandateId, in: path, required: true, schema: {type: string}}
     get:
-      tags: [Fédération]
-      summary: Obtenir un mandat de la fédération
-      operationId: getMandatFederation
+      tags: [Federation]
+      summary: Get a federation mandate
+      operationId: getFederationMandate
       responses:
-        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/MandatFederation'}}}}
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/FederationMandate'}}}}
         '404': {$ref: '#/components/responses/NotFound'}
 
+# ================================================================
 components:
 
   parameters:
@@ -608,7 +661,7 @@ components:
       name: id
       in: path
       required: true
-      schema: {type: string, format: uuid}
+      schema: {type: string}
     page:
       name: page
       in: query
@@ -620,406 +673,444 @@ components:
 
   responses:
     NotFound:
-      description: Ressource introuvable
+      description: Resource not found
       content:
         application/json:
-          schema: {$ref: '#/components/schemas/Erreur'}
+          schema: {$ref: '#/components/schemas/Error'}
     UnprocessableEntity:
-      description: Condition métier non respectée
+      description: Business rule violation
       content:
         application/json:
-          schema: {$ref: '#/components/schemas/Erreur'}
+          schema: {$ref: '#/components/schemas/Error'}
 
   schemas:
 
-    Poste:
+    # ── Enumerations ──────────────────────────────────────────
+    MemberOccupation:
       type: string
-      enum: [PRESIDENT, PRESIDENT_ADJOINT, TRESORIER, SECRETAIRE, MEMBRE_CONFIRME, MEMBRE_JUNIOR]
+      enum: [PRESIDENT, VICE_PRESIDENT, TREASURER, SECRETARY, SENIOR, JUNIOR]
 
-    Genre:
+    Gender:
       type: string
-      enum: [MASCULIN, FEMININ]
+      enum: [MALE, FEMALE]
 
-    TypeCompte:
+    AccountType:
       type: string
-      enum: [CAISSE, BANCAIRE, MOBILE_MONEY]
+      enum: [CASH, BANK, MOBILE_MONEY]
 
-    TypeCotisation:
+    ContributionType:
       type: string
-      enum: [MENSUELLE, ANNUELLE, PONCTUELLE]
+      enum: [MONTHLY, ANNUAL, OCCASIONAL]
 
-    ModePaiement:
+    PaymentMethod:
       type: string
-      enum: [ESPECE, VIREMENT_BANCAIRE, MOBILE_MONEY]
+      enum: [CASH, BANK_TRANSFER, MOBILE_MONEY]
 
-    TypeActivite:
+    ActivityType:
       type: string
-      enum: [ASSEMBLEE_GENERALE, FORMATION_JUNIORS, EXCEPTIONNELLE, FEDERATION]
+      enum: [GENERAL_ASSEMBLY, JUNIOR_TRAINING, EXCEPTIONAL, FEDERATION]
 
-    StatutPresence:
+    AttendanceStatus:
       type: string
-      enum: [PRESENT, ABSENT, EXCUSE]
+      enum: [PRESENT, ABSENT, EXCUSED]
 
-    Banque:
+    Bank:
       type: string
       enum: [BRED, MCB, BMOI, BOA, BGFI, AFG, ACCES_BANQUE, BAOBAB, SIPEM]
 
-    ServiceMobileMoney:
+    MobileMoneyService:
       type: string
       enum: [ORANGE_MONEY, MVOLA, AIRTEL_MONEY]
 
-    Collectivite:
-      type: object
-      properties:
-        id: {type: string, format: uuid, readOnly: true}
-        numero: {type: string}
-        nom: {type: string}
-        specialiteAgricole: {type: string}
-        ville: {type: string}
-        dateCreation: {type: string, format: date}
-        autorisationOuverture: {type: boolean, default: false}
+    # ── Member ────────────────────────────────────────────────
+    MemberIdentifier:
+      type: string
 
-    CollectiviteRequest:
+    MemberInformation:
       type: object
-      required: [numero, nom, specialiteAgricole, ville, membresInitiaux]
       properties:
-        numero: {type: string}
-        nom: {type: string}
-        specialiteAgricole: {type: string}
-        ville: {type: string}
-        dateCreation: {type: string, format: date}
-        membresInitiaux:
+        firstName: {type: string}
+        lastName: {type: string}
+        birthDate: {type: string, format: date}
+        gender: {$ref: '#/components/schemas/Gender'}
+        address: {type: string}
+        profession: {type: string}
+        phoneNumber: {type: string}
+        email: {type: string, format: email}
+        occupation: {$ref: '#/components/schemas/MemberOccupation'}
+
+    CreateMember:
+      allOf:
+        - $ref: '#/components/schemas/MemberInformation'
+      type: object
+      properties:
+        collectivityIdentifier: {type: string}
+        referees:
+          type: array
+          items: {$ref: '#/components/schemas/MemberIdentifier'}
+        registrationFeePaid: {type: boolean}
+        membershipDuesPaid: {type: boolean}
+
+    Member:
+      allOf:
+        - $ref: '#/components/schemas/MemberInformation'
+      type: object
+      properties:
+        id: {$ref: '#/components/schemas/MemberIdentifier'}
+        collectivityId: {type: string}
+        active: {type: boolean}
+        memberSince: {type: string, format: date}
+        referees:
+          type: array
+          items: {$ref: '#/components/schemas/Member'}
+
+    ResignRequest:
+      type: object
+      required: [resignationDate]
+      properties:
+        resignationDate: {type: string, format: date}
+        reason: {type: string}
+
+    TransferRequest:
+      type: object
+      required: [targetCollectivityId, transferDate]
+      properties:
+        targetCollectivityId: {type: string}
+        transferDate: {type: string, format: date}
+        reason: {type: string}
+
+    # ── Collectivity ──────────────────────────────────────────
+    MemberIdentifierRef:
+      type: object
+      properties:
+        id: {$ref: '#/components/schemas/MemberIdentifier'}
+
+    CreateCollectivityStructure:
+      type: object
+      properties:
+        president: {$ref: '#/components/schemas/MemberIdentifier'}
+        vicePresident: {$ref: '#/components/schemas/MemberIdentifier'}
+        treasurer: {$ref: '#/components/schemas/MemberIdentifier'}
+        secretary: {$ref: '#/components/schemas/MemberIdentifier'}
+
+    CollectivityStructure:
+      type: object
+      properties:
+        president: {$ref: '#/components/schemas/Member'}
+        vicePresident: {$ref: '#/components/schemas/Member'}
+        treasurer: {$ref: '#/components/schemas/Member'}
+        secretary: {$ref: '#/components/schemas/Member'}
+
+    CreateCollectivity:
+      type: object
+      properties:
+        location: {type: string}
+        specialty: {type: string}
+        creationDate: {type: string, format: date}
+        federationApproval: {type: boolean}
+        structure: {$ref: '#/components/schemas/CreateCollectivityStructure'}
+        members:
           type: array
           minItems: 10
-          items: {$ref: '#/components/schemas/PosteMembreRequest'}
+          items: {$ref: '#/components/schemas/MemberIdentifier'}
 
-    AutorisationRequest:
-      type: object
-      required: [autorise]
-      properties:
-        autorise: {type: boolean}
-        commentaire: {type: string}
-
-    Membre:
+    Collectivity:
       type: object
       properties:
-        id: {type: string, format: uuid, readOnly: true}
-        nom: {type: string}
-        prenom: {type: string}
-        dateNaissance: {type: string, format: date}
-        genre: {$ref: '#/components/schemas/Genre'}
-        adresse: {type: string}
-        metier: {type: string}
-        telephone: {type: string}
-        email: {type: string, format: email}
-        dateAdhesion: {type: string, format: date, readOnly: true}
-        collectiviteId: {type: string, format: uuid}
-        poste: {$ref: '#/components/schemas/Poste'}
-        actif: {type: boolean}
-
-    AdmissionRequest:
-      type: object
-      required: [nom, prenom, dateNaissance, genre, adresse, metier, telephone, email, parrainId, paiement]
-      properties:
-        nom: {type: string}
-        prenom: {type: string}
-        dateNaissance: {type: string, format: date}
-        genre: {$ref: '#/components/schemas/Genre'}
-        adresse: {type: string}
-        metier: {type: string}
-        telephone: {type: string}
-        email: {type: string, format: email}
-        parrainId: {type: string, format: uuid}
-        paiement:
-          type: object
-          required: [modePaiement, reference]
-          properties:
-            modePaiement:
-              type: string
-              enum: [MOBILE_MONEY, VIREMENT_BANCAIRE]
-            reference: {type: string}
-
-    DemissionRequest:
-      type: object
-      required: [dateDemission]
-      properties:
-        dateDemission: {type: string, format: date}
-        motif: {type: string}
-
-    TransfertRequest:
-      type: object
-      required: [collectiviteDestinationId, dateTransfert]
-      properties:
-        collectiviteDestinationId: {type: string, format: uuid}
-        dateTransfert: {type: string, format: date}
-        motif: {type: string}
-
-    PosteMembreRequest:
-      type: object
-      required: [membreId, poste]
-      properties:
-        membreId: {type: string, format: uuid}
-        poste: {$ref: '#/components/schemas/Poste'}
-
-    Mandat:
-      type: object
-      properties:
-        id: {type: string, format: uuid, readOnly: true}
-        collectiviteId: {type: string, format: uuid}
-        annee: {type: integer}
-        dateDebut: {type: string, format: date}
-        dateFin: {type: string, format: date}
-        postes:
+        id: {type: string}
+        number: {type: string}
+        name: {type: string}
+        location: {type: string}
+        specialty: {type: string}
+        creationDate: {type: string, format: date}
+        federationApproval: {type: boolean}
+        structure: {$ref: '#/components/schemas/CollectivityStructure'}
+        members:
           type: array
-          items: {$ref: '#/components/schemas/PosteMembreRequest'}
+          items: {$ref: '#/components/schemas/Member'}
 
-    MandatRequest:
+    ApprovalRequest:
       type: object
-      required: [annee, postes]
+      required: [approved]
       properties:
-        annee: {type: integer}
-        postes:
+        approved: {type: boolean}
+        comment: {type: string}
+
+    # ── Mandate ───────────────────────────────────────────────
+    MemberOccupationRef:
+      type: object
+      required: [memberId, occupation]
+      properties:
+        memberId: {type: string}
+        occupation: {$ref: '#/components/schemas/MemberOccupation'}
+
+    Mandate:
+      type: object
+      properties:
+        id: {type: string}
+        collectivityId: {type: string}
+        year: {type: integer}
+        startDate: {type: string, format: date}
+        endDate: {type: string, format: date}
+        occupations:
+          type: array
+          items: {$ref: '#/components/schemas/MemberOccupationRef'}
+
+    CreateMandate:
+      type: object
+      required: [year, occupations]
+      properties:
+        year: {type: integer}
+        occupations:
           type: array
           minItems: 4
-          items: {$ref: '#/components/schemas/PosteMembreRequest'}
+          items: {$ref: '#/components/schemas/MemberOccupationRef'}
 
-    MandatFederation:
+    FederationMandate:
       type: object
       properties:
-        id: {type: string, format: uuid, readOnly: true}
-        dateDebut: {type: string, format: date}
-        dateFin: {type: string, format: date}
-        postes:
+        id: {type: string}
+        startDate: {type: string, format: date}
+        endDate: {type: string, format: date}
+        occupations:
           type: array
-          items: {$ref: '#/components/schemas/PosteMembreRequest'}
+          items: {$ref: '#/components/schemas/MemberOccupationRef'}
 
-    MandatFederationRequest:
+    CreateFederationMandate:
       type: object
-      required: [dateDebut, postes]
+      required: [startDate, occupations]
       properties:
-        dateDebut: {type: string, format: date}
-        postes:
+        startDate: {type: string, format: date}
+        occupations:
           type: array
           minItems: 4
-          items: {$ref: '#/components/schemas/PosteMembreRequest'}
+          items: {$ref: '#/components/schemas/MemberOccupationRef'}
 
-    Cotisation:
+    # ── Contribution ──────────────────────────────────────────
+    Contribution:
       type: object
       properties:
-        id: {type: string, format: uuid, readOnly: true}
-        collectiviteId: {type: string, format: uuid}
-        membreId: {type: string, format: uuid}
-        montant: {type: number}
-        dateEncaissement: {type: string, format: date}
-        modePaiement: {$ref: '#/components/schemas/ModePaiement'}
-        type: {$ref: '#/components/schemas/TypeCotisation'}
-        motif: {type: string}
-        montantReverseFederation: {type: number, readOnly: true}
+        id: {type: string}
+        collectivityId: {type: string}
+        memberId: {type: string}
+        amount: {type: number}
+        paymentDate: {type: string, format: date}
+        paymentMethod: {$ref: '#/components/schemas/PaymentMethod'}
+        type: {$ref: '#/components/schemas/ContributionType'}
+        reason: {type: string}
+        amountForwardedToFederation: {type: number, readOnly: true}
 
-    CotisationRequest:
+    CreateContribution:
       type: object
-      required: [membreId, montant, dateEncaissement, modePaiement, type]
+      required: [memberId, amount, paymentDate, paymentMethod, type]
       properties:
-        membreId: {type: string, format: uuid}
-        montant: {type: number}
-        dateEncaissement: {type: string, format: date}
-        modePaiement: {$ref: '#/components/schemas/ModePaiement'}
-        type: {$ref: '#/components/schemas/TypeCotisation'}
-        motif: {type: string}
+        memberId: {type: string}
+        amount: {type: number}
+        paymentDate: {type: string, format: date}
+        paymentMethod: {$ref: '#/components/schemas/PaymentMethod'}
+        type: {$ref: '#/components/schemas/ContributionType'}
+        reason: {type: string}
 
-    Compte:
+    # ── Account ───────────────────────────────────────────────
+    Account:
       type: object
       properties:
-        id: {type: string, format: uuid, readOnly: true}
-        type: {$ref: '#/components/schemas/TypeCompte'}
-        solde: {type: number}
-        dateSolde: {type: string, format: date}
-        devise: {type: string, default: MGA}
-        titulaire: {type: string}
-        banque: {$ref: '#/components/schemas/Banque'}
-        numeroCompte: {type: string, pattern: '^\d{23}$'}
-        service: {$ref: '#/components/schemas/ServiceMobileMoney'}
-        telephone: {type: string}
+        id: {type: string}
+        type: {$ref: '#/components/schemas/AccountType'}
+        balance: {type: number}
+        balanceDate: {type: string, format: date}
+        currency: {type: string, default: MGA}
+        holder: {type: string}
+        bank: {$ref: '#/components/schemas/Bank'}
+        accountNumber: {type: string, pattern: '^\d{23}$'}
+        mobileMoneyService: {$ref: '#/components/schemas/MobileMoneyService'}
+        phoneNumber: {type: string}
 
-    CompteRequest:
+    CreateAccount:
       type: object
       required: [type]
       properties:
-        type: {$ref: '#/components/schemas/TypeCompte'}
-        soldeInitial: {type: number, default: 0}
-        titulaire: {type: string}
-        banque: {$ref: '#/components/schemas/Banque'}
-        numeroCompte: {type: string, pattern: '^\d{23}$'}
-        service: {$ref: '#/components/schemas/ServiceMobileMoney'}
-        telephone: {type: string}
+        type: {$ref: '#/components/schemas/AccountType'}
+        initialBalance: {type: number, default: 0}
+        holder: {type: string}
+        bank: {$ref: '#/components/schemas/Bank'}
+        accountNumber: {type: string, pattern: '^\d{23}$'}
+        mobileMoneyService: {$ref: '#/components/schemas/MobileMoneyService'}
+        phoneNumber: {type: string}
 
-    CompteUpdateRequest:
+    UpdateAccountBalance:
       type: object
-      required: [solde, dateSolde]
+      required: [balance, balanceDate]
       properties:
-        solde: {type: number}
-        dateSolde: {type: string, format: date}
+        balance: {type: number}
+        balanceDate: {type: string, format: date}
 
-    Activite:
+    # ── Activity ──────────────────────────────────────────────
+    Activity:
       type: object
       properties:
-        id: {type: string, format: uuid, readOnly: true}
-        collectiviteId: {type: string, format: uuid, nullable: true}
-        type: {$ref: '#/components/schemas/TypeActivite'}
-        titre: {type: string}
+        id: {type: string}
+        collectivityId: {type: string, nullable: true}
+        type: {$ref: '#/components/schemas/ActivityType'}
+        title: {type: string}
         description: {type: string}
         date: {type: string, format: date-time}
-        obligatoire: {type: boolean}
-        postesVises:
+        mandatory: {type: boolean}
+        targetOccupations:
           type: array
-          items: {$ref: '#/components/schemas/Poste'}
+          items: {$ref: '#/components/schemas/MemberOccupation'}
 
-    ActiviteRequest:
+    CreateActivity:
       type: object
-      required: [titre, date, obligatoire]
+      required: [title, date, mandatory]
       properties:
-        titre: {type: string}
+        title: {type: string}
         description: {type: string}
         date: {type: string, format: date-time}
-        obligatoire: {type: boolean}
-        postesVises:
+        mandatory: {type: boolean}
+        targetOccupations:
           type: array
-          items: {$ref: '#/components/schemas/Poste'}
+          items: {$ref: '#/components/schemas/MemberOccupation'}
 
-    ActiviteFederationRequest:
+    CreateFederationActivity:
       type: object
-      required: [titre, date, obligatoire]
+      required: [title, date, mandatory]
       properties:
-        titre: {type: string}
+        title: {type: string}
         description: {type: string}
         date: {type: string, format: date-time}
-        obligatoire: {type: boolean}
-        collectivitesInviteesIds:
+        mandatory: {type: boolean}
+        invitedCollectivityIds:
           type: array
-          items: {type: string, format: uuid}
+          items: {type: string}
 
-    Calendrier:
+    Schedule:
       type: object
       properties:
-        collectiviteId: {type: string, format: uuid}
-        annee: {type: integer}
-        regleAssembleeGenerale: {type: string}
-        regleFormationJuniors: {type: string}
-        datesAssembleeGenerale:
+        collectivityId: {type: string}
+        year: {type: integer}
+        generalAssemblyRule: {type: string}
+        juniorTrainingRule: {type: string}
+        generalAssemblyDates:
           type: array
           readOnly: true
           items: {type: string, format: date}
-        datesFormationJuniors:
+        juniorTrainingDates:
           type: array
           readOnly: true
           items: {type: string, format: date}
 
-    CalendrierRequest:
+    CreateSchedule:
       type: object
-      required: [annee, regleAssembleeGenerale, regleFormationJuniors]
+      required: [year, generalAssemblyRule, juniorTrainingRule]
       properties:
-        annee: {type: integer}
-        regleAssembleeGenerale: {type: string}
-        regleFormationJuniors: {type: string}
+        year: {type: integer}
+        generalAssemblyRule: {type: string}
+        juniorTrainingRule: {type: string}
 
-    Presence:
-      type: object
-      properties:
-        activiteId: {type: string, format: uuid}
-        membreId: {type: string, format: uuid}
-        statut: {$ref: '#/components/schemas/StatutPresence'}
-        estVisiteur: {type: boolean, default: false}
-        motifAbsence: {type: string, nullable: true}
-
-    PresenceRequest:
-      type: object
-      required: [membreId, statut]
-      properties:
-        membreId: {type: string, format: uuid}
-        statut: {$ref: '#/components/schemas/StatutPresence'}
-        motifAbsence: {type: string}
-
-    StatistiquesCollectivite:
+    # ── Attendance ────────────────────────────────────────────
+    Attendance:
       type: object
       properties:
-        collectiviteId: {type: string, format: uuid}
-        mois: {type: integer}
-        annee: {type: integer}
-        tauxAssiduitePourcent: {type: number}
-        nombreMembresActifs: {type: integer}
-        nombreActivitesTenues: {type: integer}
+        activityId: {type: string}
+        memberId: {type: string}
+        status: {$ref: '#/components/schemas/AttendanceStatus'}
+        isVisitor: {type: boolean, default: false}
+        absenceReason: {type: string, nullable: true}
 
-    StatMembre:
+    CreateAttendance:
+      type: object
+      required: [memberId, status]
+      properties:
+        memberId: {type: string}
+        status: {$ref: '#/components/schemas/AttendanceStatus'}
+        absenceReason: {type: string}
+
+    # ── Statistics ────────────────────────────────────────────
+    CollectivityStatistics:
       type: object
       properties:
-        membreId: {type: string, format: uuid}
-        dateDebut: {type: string, format: date}
-        dateFin: {type: string, format: date}
-        tauxAssiduitePourcent: {type: number}
-        montantEncaisseMGA: {type: number}
-        montantImpayeMGA: {type: number}
+        collectivityId: {type: string}
+        month: {type: integer}
+        year: {type: integer}
+        attendanceRatePercent: {type: number}
+        activeMembers: {type: integer}
+        activitiesHeld: {type: integer}
 
+    MemberStatistics:
+      type: object
+      properties:
+        memberId: {type: string}
+        startDate: {type: string, format: date}
+        endDate: {type: string, format: date}
+        attendanceRatePercent: {type: number}
+        totalPaidMGA: {type: number}
+        totalUnpaidMGA: {type: number}
+
+    # ── Federation ────────────────────────────────────────────
     Federation:
       type: object
       properties:
-        id: {type: string, format: uuid, readOnly: true}
-        nom: {type: string}
-        pourcentageCotisationReverse: {type: number}
+        id: {type: string}
+        name: {type: string}
+        contributionForwardingPercent: {type: number}
 
-    FederationRequest:
+    UpdateFederation:
       type: object
-      required: [pourcentageCotisationReverse]
+      required: [contributionForwardingPercent]
       properties:
-        pourcentageCotisationReverse:
+        contributionForwardingPercent:
           type: number
           minimum: 0
           maximum: 100
 
-    Erreur:
+    # ── Error ─────────────────────────────────────────────────
+    Error:
       type: object
       properties:
         code: {type: string}
         message: {type: string}
 
+    # ── Pagination ────────────────────────────────────────────
     Page:
       type: object
       properties:
         page: {type: integer}
-        taille: {type: integer}
+        size: {type: integer}
         totalElements: {type: integer}
         totalPages: {type: integer}
 
-    PageCollectivite:
+    PageCollectivity:
       allOf:
         - $ref: '#/components/schemas/Page'
         - type: object
           properties:
-            contenu: {type: array, items: {$ref: '#/components/schemas/Collectivite'}}
+            content: {type: array, items: {$ref: '#/components/schemas/Collectivity'}}
 
-    PageMembre:
+    PageMember:
       allOf:
         - $ref: '#/components/schemas/Page'
         - type: object
           properties:
-            contenu: {type: array, items: {$ref: '#/components/schemas/Membre'}}
+            content: {type: array, items: {$ref: '#/components/schemas/Member'}}
 
-    PageCotisation:
+    PageContribution:
       allOf:
         - $ref: '#/components/schemas/Page'
         - type: object
           properties:
-            contenu: {type: array, items: {$ref: '#/components/schemas/Cotisation'}}
+            content: {type: array, items: {$ref: '#/components/schemas/Contribution'}}
 
-    PageActivite:
+    PageActivity:
       allOf:
         - $ref: '#/components/schemas/Page'
         - type: object
           properties:
-            contenu: {type: array, items: {$ref: '#/components/schemas/Activite'}}
+            content: {type: array, items: {$ref: '#/components/schemas/Activity'}}
 
-    PageStatMembre:
+    PageMemberStatistics:
       allOf:
         - $ref: '#/components/schemas/Page'
         - type: object
           properties:
-            contenu: {type: array, items: {$ref: '#/components/schemas/StatMembre'}}
+            content: {type: array, items: {$ref: '#/components/schemas/MemberStatistics'}}

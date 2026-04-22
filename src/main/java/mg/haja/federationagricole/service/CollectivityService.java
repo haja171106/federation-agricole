@@ -1,5 +1,8 @@
 package mg.haja.federationagricole.service;
 
+import mg.haja.federationagricole.DTO.CreateCollectivityRequest;
+import mg.haja.federationagricole.Entity.Collectivity;
+import mg.haja.federationagricole.repository.CollectivityRepository;
 import org.springframework.stereotype.Service;
 
 @Service

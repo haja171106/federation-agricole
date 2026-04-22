@@ -1,5 +1,8 @@
 package mg.haja.federationagricole.service;
 
+import mg.haja.federationagricole.DTO.CreateMemberRequest;
+import mg.haja.federationagricole.Entity.Member;
+import mg.haja.federationagricole.repository.MemberRepository;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -15,13 +18,11 @@ public class MemberService {
 
     public Member createMember(CreateMemberRequest request) {
 
-        // 🔴 email unique
         repository.findByEmail(request.email)
                 .ifPresent(m -> {
                     throw new RuntimeException("Email already used");
                 });
 
-        // 🔴 règles métier B-2
         if (request.sponsors.size() < 2) {
             throw new RuntimeException("At least 2 sponsors required");
         }

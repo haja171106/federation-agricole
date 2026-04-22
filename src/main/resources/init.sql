@@ -1,14 +1,9 @@
--- ================================================================
--- 0. DATABASE & USER
--- ================================================================
+
 CREATE USER agro_federation_user WITH PASSWORD '12345678';
 CREATE DATABASE agro_federation_db OWNER agro_federation_user;
 \c agro_federation_db;
 GRANT ALL PRIVILEGES ON DATABASE agro_federation_db TO agro_federation_user;
 
--- ================================================================
--- 1. TABLES
--- ================================================================
 
 CREATE TABLE membre (
     id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -86,7 +81,6 @@ CREATE TABLE poste_mandat (
     CONSTRAINT uq_membre_mandat UNIQUE (mandat_id, membre_id)
 );
 
--- Index partiel : un seul titulaire par poste spécifique par mandat
 CREATE UNIQUE INDEX uq_poste_specifique_mandat
     ON poste_mandat (mandat_id, poste)
     WHERE poste IN ('PRESIDENT','PRESIDENT_ADJOINT','TRESORIER','SECRETAIRE');
@@ -138,7 +132,6 @@ CREATE TABLE compte (
     )
 );
 
--- Une seule caisse par entité
 CREATE UNIQUE INDEX uq_caisse_collectivite
     ON compte (collectivite_id) WHERE type = 'CAISSE' AND proprietaire_type = 'COLLECTIVITE';
 CREATE UNIQUE INDEX uq_caisse_federation
@@ -244,20 +237,13 @@ CREATE TABLE presence (
     )
 );
 
--- Droits sur toutes les tables
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO agro_federation_user;
 GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO agro_federation_user;
 
--- ================================================================
--- 2. DONNÉES DE TEST
--- ================================================================
-
--- Fédération
 INSERT INTO federation (id, nom, pourcentage_cotisation_reverse) VALUES
     ('00000000-0000-0000-0000-000000000001',
      'Fédération Nationale de Collectivités Agricoles de Madagascar', 10.00);
 
--- Membres (12 pour pouvoir ouvrir 1 collectivité)
 INSERT INTO membre (id, nom, prenom, date_naissance, genre, adresse, metier, telephone, email, date_adhesion) VALUES
     ('aaaaaaaa-0000-0000-0000-000000000001', 'Rakoto',    'Jean',     '1985-03-12', 'MASCULIN', 'Antananarivo',  'Riziculteur',    '+261320000001', 'jean.rakoto@mail.mg',     '2024-01-01'),
     ('aaaaaaaa-0000-0000-0000-000000000002', 'Rabe',      'Marie',    '1990-07-22', 'FEMININ',  'Antananarivo',  'Maraîchère',     '+261320000002', 'marie.rabe@mail.mg',      '2024-01-01'),
@@ -272,7 +258,6 @@ INSERT INTO membre (id, nom, prenom, date_naissance, genre, adresse, metier, tel
     ('aaaaaaaa-0000-0000-0000-000000000011', 'Rafaralahy','Mamy',     '1983-01-28', 'MASCULIN', 'Antananarivo',  'Arboriculteur',  '+261320000011', 'mamy.rafaralahy@mail.mg', '2024-01-01'),
     ('aaaaaaaa-0000-0000-0000-000000000012', 'Raharijaona','Zo',      '1997-10-11', 'FEMININ',  'Antananarivo',  'Éleveuse',       '+261320000012', 'zo.raharijaona@mail.mg',  '2024-01-10');
 
--- Collectivité
 INSERT INTO collectivite (id, numero, nom, specialite_agricole, ville, date_creation, autorisation_ouverture) VALUES
     ('cccccccc-0000-0000-0000-000000000001',
      'COLL-001',
@@ -282,7 +267,6 @@ INSERT INTO collectivite (id, numero, nom, specialite_agricole, ville, date_crea
      '2024-02-01',
      TRUE);
 
--- Adhésions
 INSERT INTO adhesion (membre_id, collectivite_id, parrain_id, date_adhesion, actif) VALUES
     ('aaaaaaaa-0000-0000-0000-000000000001', 'cccccccc-0000-0000-0000-000000000001', NULL, '2024-02-01', TRUE),
     ('aaaaaaaa-0000-0000-0000-000000000002', 'cccccccc-0000-0000-0000-000000000001', NULL, '2024-02-01', TRUE),
@@ -298,7 +282,6 @@ INSERT INTO adhesion (membre_id, collectivite_id, parrain_id, date_adhesion, act
     ('aaaaaaaa-0000-0000-0000-000000000012', 'cccccccc-0000-0000-0000-000000000001',
      'aaaaaaaa-0000-0000-0000-000000000001', '2024-02-10', TRUE);
 
--- Mandat 2025
 INSERT INTO mandat (id, collectivite_id, annee, date_debut, date_fin) VALUES
     ('dddddddd-0000-0000-0000-000000000001',
      'cccccccc-0000-0000-0000-000000000001',
@@ -318,7 +301,6 @@ INSERT INTO poste_mandat (mandat_id, membre_id, poste) VALUES
     ('dddddddd-0000-0000-0000-000000000001', 'aaaaaaaa-0000-0000-0000-000000000011', 'MEMBRE_CONFIRME'),
     ('dddddddd-0000-0000-0000-000000000001', 'aaaaaaaa-0000-0000-0000-000000000012', 'MEMBRE_JUNIOR');
 
--- Mandat fédération 2024-2026
 INSERT INTO mandat_federation (id, federation_id, date_debut, date_fin) VALUES
     ('eeeeeeee-0000-0000-0000-000000000001',
      '00000000-0000-0000-0000-000000000001',
@@ -330,7 +312,6 @@ INSERT INTO poste_mandat_federation (mandat_federation_id, membre_id, poste) VAL
     ('eeeeeeee-0000-0000-0000-000000000001', 'aaaaaaaa-0000-0000-0000-000000000003', 'TRESORIER'),
     ('eeeeeeee-0000-0000-0000-000000000001', 'aaaaaaaa-0000-0000-0000-000000000004', 'SECRETAIRE');
 
--- Comptes de la collectivité
 INSERT INTO compte (id, proprietaire_type, collectivite_id, type, solde, date_solde) VALUES
     ('ffffffff-0000-0000-0000-000000000001', 'COLLECTIVITE', 'cccccccc-0000-0000-0000-000000000001', 'CAISSE',      500000.00, '2025-04-01'),
     ('ffffffff-0000-0000-0000-000000000002', 'COLLECTIVITE', 'cccccccc-0000-0000-0000-000000000001', 'BANCAIRE',   2500000.00, '2025-04-01'),
@@ -348,11 +329,9 @@ INSERT INTO compte_mobile_money (compte_id, titulaire, service, telephone) VALUE
      'MVOLA',
      '+261340000003');
 
--- Compte de la fédération
 INSERT INTO compte (id, proprietaire_type, federation_id, type, solde, date_solde) VALUES
     ('ffffffff-0000-0000-0000-000000000010', 'FEDERATION', '00000000-0000-0000-0000-000000000001', 'CAISSE', 1000000.00, '2025-04-01');
 
--- Cotisations
 INSERT INTO cotisation (collectivite_id, membre_id, montant, date_encaissement, mode_paiement, type, montant_reverse_federation) VALUES
     ('cccccccc-0000-0000-0000-000000000001', 'aaaaaaaa-0000-0000-0000-000000000001', 10000, '2025-01-05', 'MOBILE_MONEY',    'MENSUELLE', 1000),
     ('cccccccc-0000-0000-0000-000000000001', 'aaaaaaaa-0000-0000-0000-000000000002', 10000, '2025-01-06', 'ESPECE',          'MENSUELLE', 1000),
@@ -361,16 +340,13 @@ INSERT INTO cotisation (collectivite_id, membre_id, montant, date_encaissement, 
     ('cccccccc-0000-0000-0000-000000000001', 'aaaaaaaa-0000-0000-0000-000000000005', 10000, '2025-02-05', 'ESPECE',          'MENSUELLE', 1000),
     ('cccccccc-0000-0000-0000-000000000001', 'aaaaaaaa-0000-0000-0000-000000000001', 50000, '2025-03-01', 'VIREMENT_BANCAIRE','PONCTUELLE', NULL);
 
--- Erreur intentionnelle : la cotisation ponctuelle doit avoir un motif
 UPDATE cotisation SET motif = 'Financement formation terrain' WHERE type = 'PONCTUELLE';
 
--- Calendrier 2025
 INSERT INTO calendrier (collectivite_id, annee, regle_assemblee_generale, regle_formation_juniors) VALUES
     ('cccccccc-0000-0000-0000-000000000001', 2025,
      '2ème dimanche du mois',
      '4ème samedi du mois');
 
--- Activités
 INSERT INTO activite (id, collectivite_id, type, titre, date, obligatoire) VALUES
     ('bbbbbbbb-0000-0000-0000-000000000001',
      'cccccccc-0000-0000-0000-000000000001',
@@ -397,15 +373,12 @@ INSERT INTO activite (id, collectivite_id, type, titre, date, obligatoire) VALUE
      '2025-04-05 09:00:00',
      TRUE);
 
--- Poste visé pour la formation juniors
 INSERT INTO activite_poste_vise (activite_id, poste) VALUES
     ('bbbbbbbb-0000-0000-0000-000000000002', 'MEMBRE_JUNIOR');
 
--- Collectivités invitées à l'AG fédération
 INSERT INTO activite_collectivite_invitee (activite_id, collectivite_id) VALUES
     ('bbbbbbbb-0000-0000-0000-000000000004', 'cccccccc-0000-0000-0000-000000000001');
 
--- Présences AG Janvier
 INSERT INTO presence (activite_id, membre_id, statut, est_visiteur) VALUES
     ('bbbbbbbb-0000-0000-0000-000000000001', 'aaaaaaaa-0000-0000-0000-000000000001', 'PRESENT', FALSE),
     ('bbbbbbbb-0000-0000-0000-000000000001', 'aaaaaaaa-0000-0000-0000-000000000002', 'PRESENT', FALSE),
@@ -424,7 +397,6 @@ UPDATE presence SET motif_absence = 'Déplacement professionnel'
 WHERE activite_id = 'bbbbbbbb-0000-0000-0000-000000000001'
   AND membre_id   = 'aaaaaaaa-0000-0000-0000-000000000012';
 
--- Présences formation juniors
 INSERT INTO presence (activite_id, membre_id, statut, est_visiteur) VALUES
     ('bbbbbbbb-0000-0000-0000-000000000002', 'aaaaaaaa-0000-0000-0000-000000000008', 'PRESENT', FALSE),
     ('bbbbbbbb-0000-0000-0000-000000000002', 'aaaaaaaa-0000-0000-0000-000000000009', 'PRESENT', FALSE),
