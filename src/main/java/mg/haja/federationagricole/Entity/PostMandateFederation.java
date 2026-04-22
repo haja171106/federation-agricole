@@ -1,5 +1,6 @@
 package mg.haja.federationagricole.Entity;
 
+
 public class PostMandateFederation {
     private int id;
     private MandateFederation mandateFederation;
@@ -20,28 +21,28 @@ public class PostMandateFederation {
         return id;
     }
 
-    public void setId(int id) {
-        this.id = id;
-    }
-
     public MandateFederation getMandateFederation() {
         return mandateFederation;
-    }
-
-    public void setMandateFederation(MandateFederation mandateFederation) {
-        this.mandateFederation = mandateFederation;
     }
 
     public Member getMember() {
         return member;
     }
 
-    public void setMember(Member member) {
-        this.member = member;
-    }
-
     public String getPosition() {
         return position;
+    }
+
+    public void setId(int id) {
+        this.id = id;
+    }
+
+    public void setMandateFederation(MandateFederation mandateFederation) {
+        this.mandateFederation = mandateFederation;
+    }
+
+    public void setMember(Member member) {
+        this.member = member;
     }
 
     public void setPosition(String position) {

@@ -1,5 +1,6 @@
 package mg.haja.federationagricole.Entity;
 
+
 public class MobileMoneyAccount {
     private int id;
     private Account account;
@@ -22,36 +23,36 @@ public class MobileMoneyAccount {
         return id;
     }
 
-    public void setId(int id) {
-        this.id = id;
-    }
-
     public Account getAccount() {
         return account;
-    }
-
-    public void setAccount(Account account) {
-        this.account = account;
     }
 
     public String getHolderName() {
         return holderName;
     }
 
-    public void setHolderName(String holderName) {
-        this.holderName = holderName;
-    }
-
     public String getService() {
         return service;
     }
 
-    public void setService(String service) {
-        this.service = service;
-    }
-
     public String getPhone() {
         return phone;
+    }
+
+    public void setId(int id) {
+        this.id = id;
+    }
+
+    public void setAccount(Account account) {
+        this.account = account;
+    }
+
+    public void setHolderName(String holderName) {
+        this.holderName = holderName;
+    }
+
+    public void setService(String service) {
+        this.service = service;
     }
 
     public void setPhone(String phone) {

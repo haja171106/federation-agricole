@@ -19,13 +19,13 @@ public class CreateMemberRequest {
 
     public List<SponsorInput> sponsors;
 
-    public int membershipFee; // 50000
+    public int membershipFee;
     public int annualContribution;
 
     public static class SponsorInput {
         public int memberId;
         public int collectivityId;
-        public String relationship; // friend, family...
+        public String relationship;
         public int seniorityDays;
     }
 }

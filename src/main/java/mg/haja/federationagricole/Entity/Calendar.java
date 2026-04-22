@@ -1,62 +1,61 @@
 package mg.haja.federationagricole.Entity;
 
-import java.time.LocalDate;
 
 public class Calendar {
     private int id;
     private Collectivity collectivity;
     private int year;
     private String generalAssemblyRule;
-    private String youthTrainingRule;
+    private String trainingRule;
 
     public Calendar() {
     }
 
-    public Calendar(int id, Collectivity collectivity, int year, String generalAssemblyRule, String youthTrainingRule) {
+    public Calendar(int id, Collectivity collectivity, int year, String generalAssemblyRule, String trainingRule) {
         this.id = id;
         this.collectivity = collectivity;
         this.year = year;
         this.generalAssemblyRule = generalAssemblyRule;
-        this.youthTrainingRule = youthTrainingRule;
+        this.trainingRule = trainingRule;
     }
 
     public int getId() {
         return id;
     }
 
-    public void setId(int id) {
-        this.id = id;
-    }
-
     public Collectivity getCollectivity() {
         return collectivity;
-    }
-
-    public void setCollectivity(Collectivity collectivity) {
-        this.collectivity = collectivity;
     }
 
     public int getYear() {
         return year;
     }
 
-    public void setYear(int year) {
-        this.year = year;
-    }
-
     public String getGeneralAssemblyRule() {
         return generalAssemblyRule;
+    }
+
+    public String getTrainingRule() {
+        return trainingRule;
+    }
+
+    public void setId(int id) {
+        this.id = id;
+    }
+
+    public void setCollectivity(Collectivity collectivity) {
+        this.collectivity = collectivity;
+    }
+
+    public void setYear(int year) {
+        this.year = year;
     }
 
     public void setGeneralAssemblyRule(String generalAssemblyRule) {
         this.generalAssemblyRule = generalAssemblyRule;
     }
 
-    public String getYouthTrainingRule() {
-        return youthTrainingRule;
-    }
-
-    public void setYouthTrainingRule(String youthTrainingRule) {
-        this.youthTrainingRule = youthTrainingRule;
+    public void setTrainingRule(String trainingRule) {
+        this.trainingRule = trainingRule;
     }
 }

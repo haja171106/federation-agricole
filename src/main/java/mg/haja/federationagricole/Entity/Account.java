@@ -1,5 +1,6 @@
 package mg.haja.federationagricole.Entity;
 
+
 import java.time.LocalDate;
 
 public class Account {
@@ -31,60 +32,60 @@ public class Account {
         return id;
     }
 
-    public void setId(int id) {
-        this.id = id;
-    }
-
     public String getOwnerType() {
         return ownerType;
-    }
-
-    public void setOwnerType(String ownerType) {
-        this.ownerType = ownerType;
     }
 
     public Collectivity getCollectivity() {
         return collectivity;
     }
 
-    public void setCollectivity(Collectivity collectivity) {
-        this.collectivity = collectivity;
-    }
-
     public Federation getFederation() {
         return federation;
-    }
-
-    public void setFederation(Federation federation) {
-        this.federation = federation;
     }
 
     public String getType() {
         return type;
     }
 
-    public void setType(String type) {
-        this.type = type;
-    }
-
     public double getBalance() {
         return balance;
-    }
-
-    public void setBalance(double balance) {
-        this.balance = balance;
     }
 
     public LocalDate getBalanceDate() {
         return balanceDate;
     }
 
-    public void setBalanceDate(LocalDate balanceDate) {
-        this.balanceDate = balanceDate;
-    }
-
     public String getCurrency() {
         return currency;
+    }
+
+    public void setId(int id) {
+        this.id = id;
+    }
+
+    public void setOwnerType(String ownerType) {
+        this.ownerType = ownerType;
+    }
+
+    public void setCollectivity(Collectivity collectivity) {
+        this.collectivity = collectivity;
+    }
+
+    public void setFederation(Federation federation) {
+        this.federation = federation;
+    }
+
+    public void setType(String type) {
+        this.type = type;
+    }
+
+    public void setBalance(double balance) {
+        this.balance = balance;
+    }
+
+    public void setBalanceDate(LocalDate balanceDate) {
+        this.balanceDate = balanceDate;
     }
 
     public void setCurrency(String currency) {
