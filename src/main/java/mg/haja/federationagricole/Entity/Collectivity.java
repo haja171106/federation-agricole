@@ -10,8 +10,15 @@ public class Collectivity {
     private String city;
     private LocalDate creationDate;
     private boolean openingAuthorization;
+    private boolean identificationAssigned;
 
+    public boolean isIdentificationAssigned() {
+        return identificationAssigned;
+    }
 
+    public void setIdentificationAssigned(boolean identificationAssigned) {
+        this.identificationAssigned = identificationAssigned;
+    }
 
     public int getId() {
         return id;

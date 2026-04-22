@@ -29,6 +29,13 @@ public class CollectivityRepository {
                 .findFirst();
     }
 
+    public Optional<Collectivity> findByName(String name) {
+        return db.values().stream()
+                .filter(c -> name.equals(c.getName()))
+                .findFirst();
+    }
+
+
     public List<Collectivity> findAll() {
         return new ArrayList<>(db.values());
     }
