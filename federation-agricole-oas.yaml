@@ -6,7 +6,8 @@ info:
     This API uses semantic versioning (MAJOR.MINOR.PATCH). Available versions are :
     - v0.0.1 (2026-04-21) : POST /collectivities for collectivities creation and POST /members for members creation.
     - v0.0.2 (2026-04-21) : Full CRUD on collectivities, members, mandates, contributions, accounts, activities, attendances and statistics.
-  version: 0.0.2
+    - v0.0.3 (2026-04-22) : PATCH /collectivities/{id}/identity — federation assigns a unique number and name to a collectivity (feature J). Once set, neither field can be changed.
+  version: 0.0.3
 
 servers:
   - url: http://localhost:8080
@@ -24,7 +25,6 @@ tags:
 
 paths:
 
-  # ── A. COLLECTIVITIES ─────────────────────────────────────────
   /collectivities:
     get:
       tags: [Collectivities]
@@ -106,7 +106,37 @@ paths:
         '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/Collectivity'}}}}
         '404': {$ref: '#/components/responses/NotFound'}
 
-  # ── B. MEMBERS ────────────────────────────────────────────────
+  /collectivities/{id}/identity:
+    parameters:
+      - $ref: '#/components/parameters/id'
+    patch:
+      tags: [Collectivities]
+      summary: Assign a unique number and name to a collectivity (feature J)
+      description: |
+        This endpoint is reserved for the federation.
+        - The system checks that the name is not already taken by another collectivity.
+        - Once a number or a name has been assigned, it cannot be changed.
+          Any attempt to overwrite an already-set value returns **409 Conflict**.
+      operationId: assignCollectivityIdentity
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/AssignIdentityRequest'}
+      responses:
+        '200':
+          description: Identity assigned — returns the updated collectivity.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Collectivity'}
+        '400':
+          description: Request body is missing both number and name.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+
   /members:
     post:
       tags: [Members]
@@ -197,7 +227,6 @@ paths:
         '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/Member'}}}}
         '422': {$ref: '#/components/responses/UnprocessableEntity'}
 
-  # ── MANDATES ──────────────────────────────────────────────────
   /collectivities/{id}/mandates:
     parameters:
       - $ref: '#/components/parameters/id'
@@ -234,7 +263,6 @@ paths:
         '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/Mandate'}}}}
         '404': {$ref: '#/components/responses/NotFound'}
 
-  # ── C. CONTRIBUTIONS ──────────────────────────────────────────
   /collectivities/{id}/contributions:
     parameters:
       - $ref: '#/components/parameters/id'
@@ -276,7 +304,6 @@ paths:
         '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/Contribution'}}}}
         '404': {$ref: '#/components/responses/NotFound'}
 
-  # ── D. ACCOUNTS ───────────────────────────────────────────────
   /collectivities/{id}/accounts:
     parameters:
       - $ref: '#/components/parameters/id'
@@ -370,7 +397,6 @@ paths:
         '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/Account'}}}}
         '404': {$ref: '#/components/responses/NotFound'}
 
-  # ── E. ACTIVITIES ─────────────────────────────────────────────
   /collectivities/{id}/schedule:
     parameters:
       - $ref: '#/components/parameters/id'
@@ -509,7 +535,6 @@ paths:
         '204': {description: Deleted}
         '404': {$ref: '#/components/responses/NotFound'}
 
-  # ── F. ATTENDANCES ────────────────────────────────────────────
   /activities/{activityId}/attendances:
     parameters:
       - {name: activityId, in: path, required: true, schema: {type: string}}
@@ -556,7 +581,6 @@ paths:
         '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/Attendance'}}}}
         '404': {$ref: '#/components/responses/NotFound'}
 
-  # ── G. STATISTICS ─────────────────────────────────────────────
   /collectivities/{id}/statistics:
     parameters:
       - $ref: '#/components/parameters/id'
@@ -602,7 +626,6 @@ paths:
         '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/MemberStatistics'}}}}
         '404': {$ref: '#/components/responses/NotFound'}
 
-  # ── FEDERATION ────────────────────────────────────────────────
   /federation:
     get:
       tags: [Federation]
@@ -653,7 +676,6 @@ paths:
         '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/FederationMandate'}}}}
         '404': {$ref: '#/components/responses/NotFound'}
 
-# ================================================================
 components:
 
   parameters:
@@ -682,10 +704,16 @@ components:
       content:
         application/json:
           schema: {$ref: '#/components/schemas/Error'}
+    Conflict:
+      description: |
+        The number or name is already assigned to this collectivity and cannot be changed,
+        or the name is already used by another collectivity.
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}
 
   schemas:
 
-    # ── Enumerations ──────────────────────────────────────────
     MemberOccupation:
       type: string
       enum: [PRESIDENT, VICE_PRESIDENT, TREASURER, SECRETARY, SENIOR, JUNIOR]
@@ -722,7 +750,6 @@ components:
       type: string
       enum: [ORANGE_MONEY, MVOLA, AIRTEL_MONEY]
 
-    # ── Member ────────────────────────────────────────────────
     MemberIdentifier:
       type: string
 
@@ -779,7 +806,6 @@ components:
         transferDate: {type: string, format: date}
         reason: {type: string}
 
-    # ── Collectivity ──────────────────────────────────────────
     MemberIdentifierRef:
       type: object
       properties:
@@ -836,7 +862,20 @@ components:
         approved: {type: boolean}
         comment: {type: string}
 
-    # ── Mandate ───────────────────────────────────────────────
+    AssignIdentityRequest:
+      type: object
+      description: |
+        At least one of `number` or `name` must be provided.
+        Once a field is set on the collectivity, sending it again returns 409 Conflict.
+        The `name` must be unique across all collectivities (checked by the system).
+      properties:
+        number:
+          type: string
+          description: Unique number assigned by the federation (e.g. "COLL-042").
+        name:
+          type: string
+          description: Unique name assigned by the federation (e.g. "Collectivité Rizicole d'Antananarivo").
+
     MemberOccupationRef:
       type: object
       required: [memberId, occupation]
@@ -886,7 +925,6 @@ components:
           minItems: 4
           items: {$ref: '#/components/schemas/MemberOccupationRef'}
 
-    # ── Contribution ──────────────────────────────────────────
     Contribution:
       type: object
       properties:
@@ -911,7 +949,6 @@ components:
         type: {$ref: '#/components/schemas/ContributionType'}
         reason: {type: string}
 
-    # ── Account ───────────────────────────────────────────────
     Account:
       type: object
       properties:
@@ -945,7 +982,6 @@ components:
         balance: {type: number}
         balanceDate: {type: string, format: date}
 
-    # ── Activity ──────────────────────────────────────────────
     Activity:
       type: object
       properties:
@@ -1008,7 +1044,6 @@ components:
         generalAssemblyRule: {type: string}
         juniorTrainingRule: {type: string}
 
-    # ── Attendance ────────────────────────────────────────────
     Attendance:
       type: object
       properties:
@@ -1026,7 +1061,6 @@ components:
         status: {$ref: '#/components/schemas/AttendanceStatus'}
         absenceReason: {type: string}
 
-    # ── Statistics ────────────────────────────────────────────
     CollectivityStatistics:
       type: object
       properties:
@@ -1047,7 +1081,6 @@ components:
         totalPaidMGA: {type: number}
         totalUnpaidMGA: {type: number}
 
-    # ── Federation ────────────────────────────────────────────
     Federation:
       type: object
       properties:
@@ -1064,14 +1097,12 @@ components:
           minimum: 0
           maximum: 100
 
-    # ── Error ─────────────────────────────────────────────────
     Error:
       type: object
       properties:
         code: {type: string}
         message: {type: string}
 
-    # ── Pagination ────────────────────────────────────────────
     Page:
       type: object
       properties:
