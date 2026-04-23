@@ -1,7 +1,7 @@
 package mg.haja.federationagricole.service;
 
-import mg.haja.federationagricole.model.CreateMemberPayment;
-import mg.haja.federationagricole.model.MemberPayment;
+import mg.haja.federationagricole.DTO.CreateMemberPayment;
+import mg.haja.federationagricole.Entity.MemberPayment;
 import mg.haja.federationagricole.repository.FinancialAccountRepository;
 import mg.haja.federationagricole.repository.PaymentRepository;
 import mg.haja.federationagricole.repository.TransactionRepository;

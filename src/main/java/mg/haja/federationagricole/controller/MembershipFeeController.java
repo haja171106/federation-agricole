@@ -1,7 +1,7 @@
 package mg.haja.federationagricole.controller;
 
-import mg.haja.federationagricole.model.CreateMembershipFee;
-import mg.haja.federationagricole.model.MembershipFee;
+import mg.haja.federationagricole.DTO.CreateMembershipFee;
+import mg.haja.federationagricole.Entity.MembershipFee;
 import mg.haja.federationagricole.service.MembershipFeeService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

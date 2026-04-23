@@ -20,4 +20,8 @@ public class CollectivityTransaction {
     public void setPaymentMode(PaymentMode v)           { this.paymentMode = v; }
     public String getMemberDebitedId()                  { return memberDebitedId; }
     public void setMemberDebitedId(String v)            { this.memberDebitedId = v; }
+
+    private FinancialAccount accountCredited;
+    public FinancialAccount getAccountCredited()        { return accountCredited; }
+    public void setAccountCredited(FinancialAccount v)  { this.accountCredited = v; }
 }

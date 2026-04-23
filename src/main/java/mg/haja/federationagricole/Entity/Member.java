@@ -16,6 +16,15 @@ public class Member {
     private String email;
 
     private LocalDate membershipDate;
+    private int collectivityId;
+
+    public int getCollectivityId() {
+        return collectivityId;
+    }
+
+    public void setCollectivityId(int collectivityId) {
+        this.collectivityId = collectivityId;
+    }
 
     public int getId() {
         return id;

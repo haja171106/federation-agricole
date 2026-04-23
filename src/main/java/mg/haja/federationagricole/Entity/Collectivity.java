@@ -1,5 +1,6 @@
 package mg.haja.federationagricole.Entity;
 import java.time.LocalDate;
+import java.util.List;
 
 public class Collectivity {
 
@@ -11,6 +12,15 @@ public class Collectivity {
     private LocalDate creationDate;
     private boolean openingAuthorization;
     private boolean identificationAssigned;
+    private List<Member> members;
+
+    public List<Member> getMembers() {
+        return members;
+    }
+
+    public void setMembers(List<Member> members) {
+        this.members = members;
+    }
 
     public boolean isIdentificationAssigned() {
         return identificationAssigned;

@@ -1,7 +1,7 @@
 package mg.haja.federationagricole.controller;
 
-import mg.haja.federationagricole.model.CreateMemberPayment;
-import mg.haja.federationagricole.model.MemberPayment;
+import mg.haja.federationagricole.DTO.CreateMemberPayment;
+import mg.haja.federationagricole.Entity.MemberPayment;
 import mg.haja.federationagricole.service.PaymentService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

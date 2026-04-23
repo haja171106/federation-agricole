@@ -1,6 +1,6 @@
 package mg.haja.federationagricole.service;
 
-import mg.haja.federationagricole.model.CollectivityTransaction;
+import mg.haja.federationagricole.Entity.CollectivityTransaction;
 import mg.haja.federationagricole.repository.TransactionRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;

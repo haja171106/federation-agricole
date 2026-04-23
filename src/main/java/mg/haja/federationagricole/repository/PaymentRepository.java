@@ -1,13 +1,12 @@
 package mg.haja.federationagricole.repository;
 
-import mg.haja.federationagricole.model.CreateMemberPayment;
-import mg.haja.federationagricole.model.FinancialAccount;
-import mg.haja.federationagricole.model.MemberPayment;
+import mg.haja.federationagricole.DTO.CreateMemberPayment;
+import mg.haja.federationagricole.Entity.FinancialAccount;
+import mg.haja.federationagricole.Entity.MemberPayment;
 import org.springframework.stereotype.Repository;
 
 import java.sql.*;
 import java.time.LocalDate;
-import java.util.UUID;
 
 @Repository
 public class PaymentRepository {
@@ -21,26 +20,28 @@ public class PaymentRepository {
     }
 
     public MemberPayment save(String memberId, CreateMemberPayment req) throws SQLException {
-        String id = UUID.randomUUID().toString();
         String sql = """
             INSERT INTO member_payment
-                (id, member_id, membership_fee_id, account_credited_id, amount, payment_mode, creation_date)
-            VALUES (?, ?, ?, ?, ?, ?, CURRENT_DATE)
+                (member_id, membership_fee_id, account_credited_id, amount, payment_mode, creation_date)
+            VALUES (?, ?, ?, ?, ?, CURRENT_DATE) RETURNING id
             """;
+        int id = 0;
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
-            ps.setObject(1, UUID.fromString(id));
-            ps.setObject(2, UUID.fromString(memberId));
-            ps.setObject(3, UUID.fromString(req.getMembershipFeeIdentifier()));
-            ps.setObject(4, UUID.fromString(req.getAccountCreditedIdentifier()));
-            ps.setDouble(5, req.getAmount());
-            ps.setString(6, req.getPaymentMode().name());
-            ps.executeUpdate();
+            ps.setInt(1, Integer.parseInt(memberId));
+            ps.setInt(2, Integer.parseInt(req.getMembershipFeeIdentifier()));
+            ps.setInt(3, Integer.parseInt(req.getAccountCreditedIdentifier()));
+            ps.setDouble(4, req.getAmount());
+            ps.setString(5, req.getPaymentMode().name());
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                id = rs.getInt(1);
+            }
         }
 
         FinancialAccount account = accountRepository.findById(req.getAccountCreditedIdentifier());
 
         MemberPayment payment = new MemberPayment();
-        payment.setId(id);
+        payment.setId(String.valueOf(id));
         payment.setAmount(req.getAmount());
         payment.setPaymentMode(req.getPaymentMode());
         payment.setAccountCredited(account);
@@ -50,21 +51,21 @@ public class PaymentRepository {
 
     public String findCollectivityIdByMember(String memberId) throws SQLException {
         String sql = """
-            SELECT collectivite_id FROM adhesion
-            WHERE membre_id = ? AND actif = TRUE
+            SELECT collectivity_id FROM adhesion
+            WHERE member_id = ? AND active = TRUE
             LIMIT 1
             """;
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
-            ps.setObject(1, UUID.fromString(memberId));
+            ps.setInt(1, Integer.parseInt(memberId));
             ResultSet rs = ps.executeQuery();
-            return rs.next() ? rs.getString("collectivite_id") : null;
+            return rs.next() ? String.valueOf(rs.getInt("collectivity_id")) : null;
         }
     }
 
     public boolean memberExists(String memberId) throws SQLException {
-        String sql = "SELECT 1 FROM membre WHERE id = ?";
+        String sql = "SELECT 1 FROM member WHERE id = ?";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
-            ps.setObject(1, UUID.fromString(memberId));
+            ps.setInt(1, Integer.parseInt(memberId));
             return ps.executeQuery().next();
         }
     }
@@ -72,7 +73,7 @@ public class PaymentRepository {
     public boolean membershipFeeExists(String feeId) throws SQLException {
         String sql = "SELECT 1 FROM membership_fee WHERE id = ?";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
-            ps.setObject(1, UUID.fromString(feeId));
+            ps.setInt(1, Integer.parseInt(feeId));
             return ps.executeQuery().next();
         }
     }

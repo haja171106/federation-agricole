@@ -1,4 +1,4 @@
-package mg.haja.federationagricole.model;
+package mg.haja.federationagricole.DTO;
 
 import mg.haja.federationagricole.Entity.enums.Frequency;
 import java.time.LocalDate;

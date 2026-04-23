@@ -352,6 +352,26 @@ paths:
         '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/Account'}}}}
         '404': {$ref: '#/components/responses/NotFound'}
 
+  /collectivities/{id}/financialAccounts:
+    parameters:
+      - $ref: '#/components/parameters/id'
+    get:
+      tags: [Accounts]
+      summary: List financial accounts with balance at a given date
+      operationId: listFinancialAccountsAtDate
+      parameters:
+        - {name: at, in: query, schema: {type: string, format: date}}
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AccountBalance'
+        '404': {$ref: '#/components/responses/NotFound'}
+
   /federation/accounts:
     get:
       tags: [Federation]

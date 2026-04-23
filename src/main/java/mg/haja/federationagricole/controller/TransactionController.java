@@ -1,6 +1,6 @@
 package mg.haja.federationagricole.controller;
 
-import mg.haja.federationagricole.Entity.*;
+import mg.haja.federationagricole.Entity.CollectivityTransaction;
 import mg.haja.federationagricole.service.TransactionService;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;

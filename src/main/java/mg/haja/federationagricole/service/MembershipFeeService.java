@@ -1,7 +1,7 @@
 package mg.haja.federationagricole.service;
 
-import mg.haja.federationagricole.model.CreateMembershipFee;
-import mg.haja.federationagricole.model.MembershipFee;
+import mg.haja.federationagricole.DTO.CreateMembershipFee;
+import mg.haja.federationagricole.Entity.MembershipFee;
 import mg.haja.federationagricole.repository.MembershipFeeRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
