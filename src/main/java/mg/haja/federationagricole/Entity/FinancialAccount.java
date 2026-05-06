@@ -2,6 +2,8 @@ package mg.haja.federationagricole.Entity;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import lombok.Getter;
+import lombok.Setter;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes({
@@ -9,12 +11,18 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
     @JsonSubTypes.Type(value = mg.haja.federationagricole.Entity.MobileBankingAccount.class, name = "MOBILE_BANKING"),
     @JsonSubTypes.Type(value = mg.haja.federationagricole.Entity.BankAccount.class,          name = "BANK")
 })
+@Setter
+@Getter
 public abstract class FinancialAccount {
     private String id;
     private double amount;
 
-    public String getId()              { return id; }
-    public void setId(String id)       { this.id = id; }
-    public double getAmount()          { return amount; }
-    public void setAmount(double amount){ this.amount = amount; }
+    public FinancialAccount(String id, double amount) {
+        this.id = id;
+        this.amount = amount;
+    }
+
+    public FinancialAccount() {
+
+    }
 }

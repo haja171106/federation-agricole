@@ -31,12 +31,16 @@ public class MemberService {
                         throw new RuntimeException("Email already used");
                     });
 
-            if (request.sponsors.size() < 2) {
+            if (request.collectivityId == null || request.collectivityId.trim().isEmpty()) {
+                throw new RuntimeException("Collectivity ID is required");
+            }
+
+            if (request.sponsors == null || request.sponsors.size() < 2) {
                 throw new RuntimeException("At least 2 sponsors required");
             }
 
             long sameCollectivity = request.sponsors.stream()
-                    .filter(s -> s.collectivityId == request.collectivityId)
+                    .filter(s -> request.collectivityId.equals(s.collectivityId))
                     .count();
 
             long others = request.sponsors.size() - sameCollectivity;
@@ -58,6 +62,7 @@ public class MemberService {
             m.setCollectivityId(request.collectivityId);
 
             return repository.save(m);
+
         } catch (SQLException e) {
             throw new RuntimeException("Database error", e);
         }

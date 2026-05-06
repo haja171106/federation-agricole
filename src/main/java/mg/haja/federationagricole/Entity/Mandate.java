@@ -1,30 +1,19 @@
 package mg.haja.federationagricole.Entity;
 
+import lombok.Getter;
+import lombok.Setter;
+
+@Setter
+@Getter
 public class Mandate {
-    private int id;
+    private String id;
     private Collectivity collectivity;
 
     public Mandate() {
     }
 
-    public Mandate(int id, Collectivity collectivity) {
+    public Mandate(String id, Collectivity collectivity) {
         this.id = id;
-        this.collectivity = collectivity;
-    }
-
-    public int getId() {
-        return id;
-    }
-
-    public void setId(int id) {
-        this.id = id;
-    }
-
-    public Collectivity getCollectivity() {
-        return collectivity;
-    }
-
-    public void setCollectivity(Collectivity collectivity) {
         this.collectivity = collectivity;
     }
 }

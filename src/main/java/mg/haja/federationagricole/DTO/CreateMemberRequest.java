@@ -15,7 +15,7 @@ public class CreateMemberRequest {
     public String phone;
     public String email;
 
-    public int collectivityId;
+    public String collectivityId;
 
     public List<SponsorInput> sponsors;
 
@@ -23,8 +23,8 @@ public class CreateMemberRequest {
     public int annualContribution;
 
     public static class SponsorInput {
-        public int memberId;
-        public int collectivityId;
+        public String memberId;
+        public String collectivityId;
         public String relationship; // friend, family...
         public int seniorityDays;
     }

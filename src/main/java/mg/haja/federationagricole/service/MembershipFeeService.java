@@ -21,7 +21,7 @@ public class MembershipFeeService {
 
     public List<MembershipFee> getByCollectivity(String collectivityId) {
         try {
-            if (!repository.collectivityExists(collectivityId)) {
+            if (repository.collectivityExists(collectivityId)) {
                 throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Collectivity not found");
             }
             return repository.findByCollectivityId(collectivityId);
@@ -34,7 +34,7 @@ public class MembershipFeeService {
 
     public List<MembershipFee> create(String collectivityId, List<CreateMembershipFee> requests) {
         try {
-            if (!repository.collectivityExists(collectivityId)) {
+            if (repository.collectivityExists(collectivityId)) {
                 throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Collectivity not found");
             }
             for (CreateMembershipFee req : requests) {

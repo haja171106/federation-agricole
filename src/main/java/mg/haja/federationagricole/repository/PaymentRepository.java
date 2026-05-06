@@ -7,6 +7,7 @@ import org.springframework.stereotype.Repository;
 
 import java.sql.*;
 import java.time.LocalDate;
+import java.util.UUID;
 
 @Repository
 public class PaymentRepository {
@@ -20,28 +21,30 @@ public class PaymentRepository {
     }
 
     public MemberPayment save(String memberId, CreateMemberPayment req) throws SQLException {
+        // ✅ FIX : génération UUID côté Java (id est VARCHAR(50) sans DEFAULT en DB)
+        String newId = UUID.randomUUID().toString();
+
         String sql = """
             INSERT INTO member_payment
-                (member_id, membership_fee_id, account_credited_id, amount, payment_mode, creation_date)
-            VALUES (?, ?, ?, ?, ?, CURRENT_DATE) RETURNING id
+                (id, member_id, membership_fee_id, account_credited_id, amount, payment_mode, creation_date)
+            VALUES (?, ?, ?, ?, ?, ?, CURRENT_DATE)
             """;
-        int id = 0;
+
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
-            ps.setInt(1, Integer.parseInt(memberId));
-            ps.setInt(2, Integer.parseInt(req.getMembershipFeeIdentifier()));
-            ps.setInt(3, Integer.parseInt(req.getAccountCreditedIdentifier()));
-            ps.setDouble(4, req.getAmount());
-            ps.setString(5, req.getPaymentMode().name());
-            ResultSet rs = ps.executeQuery();
-            if (rs.next()) {
-                id = rs.getInt(1);
-            }
+            // ✅ FIX : setString() partout — les IDs sont VARCHAR(50), pas des entiers
+            ps.setString(1, newId);
+            ps.setString(2, memberId);
+            ps.setString(3, req.getMembershipFeeIdentifier());
+            ps.setString(4, req.getAccountCreditedIdentifier());
+            ps.setDouble(5, req.getAmount());
+            ps.setString(6, req.getPaymentMode().name());
+            ps.executeUpdate();
         }
 
         FinancialAccount account = accountRepository.findById(req.getAccountCreditedIdentifier());
 
         MemberPayment payment = new MemberPayment();
-        payment.setId(String.valueOf(id));
+        payment.setId(newId);
         payment.setAmount(req.getAmount());
         payment.setPaymentMode(req.getPaymentMode());
         payment.setAccountCredited(account);
@@ -56,16 +59,19 @@ public class PaymentRepository {
             LIMIT 1
             """;
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
-            ps.setInt(1, Integer.parseInt(memberId));
+            // ✅ FIX : setString() — member_id est VARCHAR(50)
+            ps.setString(1, memberId);
             ResultSet rs = ps.executeQuery();
-            return rs.next() ? String.valueOf(rs.getInt("collectivity_id")) : null;
+            // ✅ FIX : getString() — collectivity_id est aussi VARCHAR(50)
+            return rs.next() ? rs.getString("collectivity_id") : null;
         }
     }
 
     public boolean memberExists(String memberId) throws SQLException {
         String sql = "SELECT 1 FROM member WHERE id = ?";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
-            ps.setInt(1, Integer.parseInt(memberId));
+            // ✅ FIX : setString() — c'était Integer.parseInt() qui causait le crash
+            ps.setString(1, memberId);
             return ps.executeQuery().next();
         }
     }
@@ -73,7 +79,8 @@ public class PaymentRepository {
     public boolean membershipFeeExists(String feeId) throws SQLException {
         String sql = "SELECT 1 FROM membership_fee WHERE id = ?";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
-            ps.setInt(1, Integer.parseInt(feeId));
+            // ✅ FIX : setString()
+            ps.setString(1, feeId);
             return ps.executeQuery().next();
         }
     }

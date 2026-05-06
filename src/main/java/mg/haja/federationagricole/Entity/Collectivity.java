@@ -1,10 +1,15 @@
 package mg.haja.federationagricole.Entity;
+import lombok.Getter;
+import lombok.Setter;
+
 import java.time.LocalDate;
 import java.util.List;
 
+@Setter
+@Getter
 public class Collectivity {
 
-    private int id;
+    private String id;
     private String number;
     private String name;
     private String agriculturalSpecialty;
@@ -14,75 +19,19 @@ public class Collectivity {
     private boolean identificationAssigned;
     private List<Member> members;
 
-    public List<Member> getMembers() {
-        return members;
-    }
-
-    public void setMembers(List<Member> members) {
+    public Collectivity(String id, String number, String name, String agriculturalSpecialty, String city, LocalDate creationDate, boolean openingAuthorization, boolean identificationAssigned, List<Member> members) {
+        this.id = id;
+        this.number = number;
+        this.name = name;
+        this.agriculturalSpecialty = agriculturalSpecialty;
+        this.city = city;
+        this.creationDate = creationDate;
+        this.openingAuthorization = openingAuthorization;
+        this.identificationAssigned = identificationAssigned;
         this.members = members;
     }
 
-    public boolean isIdentificationAssigned() {
-        return identificationAssigned;
-    }
+    public Collectivity() {
 
-    public void setIdentificationAssigned(boolean identificationAssigned) {
-        this.identificationAssigned = identificationAssigned;
-    }
-
-    public int getId() {
-        return id;
-    }
-
-    public void setId(int id) {
-        this.id = id;
-    }
-
-    public String getNumber() {
-        return number;
-    }
-
-    public void setNumber(String number) {
-        this.number = number;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public String getAgriculturalSpecialty() {
-        return agriculturalSpecialty;
-    }
-
-    public void setAgriculturalSpecialty(String agriculturalSpecialty) {
-        this.agriculturalSpecialty = agriculturalSpecialty;
-    }
-
-    public String getCity() {
-        return city;
-    }
-
-    public void setCity(String city) {
-        this.city = city;
-    }
-
-    public LocalDate getCreationDate() {
-        return creationDate;
-    }
-
-    public void setCreationDate(LocalDate creationDate) {
-        this.creationDate = creationDate;
-    }
-
-    public boolean isOpeningAuthorization() {
-        return openingAuthorization;
-    }
-
-    public void setOpeningAuthorization(boolean openingAuthorization) {
-        this.openingAuthorization = openingAuthorization;
     }
 }

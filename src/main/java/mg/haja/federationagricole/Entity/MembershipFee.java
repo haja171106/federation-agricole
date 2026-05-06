@@ -1,14 +1,21 @@
 package mg.haja.federationagricole.Entity;
 
+import lombok.Getter;
+import lombok.Setter;
 import mg.haja.federationagricole.Entity.enums.ActivityStatus;
 import mg.haja.federationagricole.DTO.CreateMembershipFee;
-
+@Setter
+@Getter
 public class MembershipFee extends CreateMembershipFee {
-    private int id;
+    private String id;
     private ActivityStatus status;
 
-    public int getId() { return id; }
-    public void setId(int id) { this.id = id; }
-    public ActivityStatus getStatus() { return status; }
-    public void setStatus(ActivityStatus status) { this.status = status; }
+    public MembershipFee(String id, ActivityStatus status) {
+        this.id = id;
+        this.status = status;
+    }
+
+    public MembershipFee() {
+
+    }
 }

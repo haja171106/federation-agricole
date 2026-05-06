@@ -10,9 +10,9 @@ import java.time.LocalDate;
 @Getter
 public class Cotisation {
 
-    private int id;
-    private int collectiviteId;
-    private int membreId;
+    private String id;
+    private String collectiviteId;
+    private String membreId;
 
     private BigDecimal montant;
     private LocalDate dateEncaissement;
@@ -23,4 +23,15 @@ public class Cotisation {
 
     private BigDecimal montantReverseFederation;
 
+    public Cotisation(String id, String collectiviteId, String membreId, BigDecimal montant, LocalDate dateEncaissement, String modePaiement, String type, String motif, BigDecimal montantReverseFederation) {
+        this.id = id;
+        this.collectiviteId = collectiviteId;
+        this.membreId = membreId;
+        this.montant = montant;
+        this.dateEncaissement = dateEncaissement;
+        this.modePaiement = modePaiement;
+        this.type = type;
+        this.motif = motif;
+        this.montantReverseFederation = montantReverseFederation;
+    }
 }

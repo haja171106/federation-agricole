@@ -10,4 +10,8 @@ public class MobileBankingAccount extends FinancialAccount {
     private MobileBankingService mobileBankingService;
     private String mobileNumber;
 
+
+    public MobileBankingAccount() {
+        super();
+    }
 }

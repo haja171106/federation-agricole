@@ -1,10 +1,14 @@
 package mg.haja.federationagricole.Entity;
 
 
-import java.time.LocalDate;
+import lombok.Getter;
+import lombok.Setter;
 
+import java.time.LocalDate;
+@Setter
+@Getter
 public class Account {
-    private int id;
+    private String id;
     private String ownerType;
     private Collectivity collectivity;
     private Federation federation;
@@ -16,7 +20,7 @@ public class Account {
     public Account() {
     }
 
-    public Account(int id, String ownerType, Collectivity collectivity, Federation federation,
+    public Account(String id, String ownerType, Collectivity collectivity, Federation federation,
                    String type, double balance, LocalDate balanceDate, String currency) {
         this.id = id;
         this.ownerType = ownerType;
@@ -25,70 +29,6 @@ public class Account {
         this.type = type;
         this.balance = balance;
         this.balanceDate = balanceDate;
-        this.currency = currency;
-    }
-
-    public int getId() {
-        return id;
-    }
-
-    public String getOwnerType() {
-        return ownerType;
-    }
-
-    public Collectivity getCollectivity() {
-        return collectivity;
-    }
-
-    public Federation getFederation() {
-        return federation;
-    }
-
-    public String getType() {
-        return type;
-    }
-
-    public double getBalance() {
-        return balance;
-    }
-
-    public LocalDate getBalanceDate() {
-        return balanceDate;
-    }
-
-    public String getCurrency() {
-        return currency;
-    }
-
-    public void setId(int id) {
-        this.id = id;
-    }
-
-    public void setOwnerType(String ownerType) {
-        this.ownerType = ownerType;
-    }
-
-    public void setCollectivity(Collectivity collectivity) {
-        this.collectivity = collectivity;
-    }
-
-    public void setFederation(Federation federation) {
-        this.federation = federation;
-    }
-
-    public void setType(String type) {
-        this.type = type;
-    }
-
-    public void setBalance(double balance) {
-        this.balance = balance;
-    }
-
-    public void setBalanceDate(LocalDate balanceDate) {
-        this.balanceDate = balanceDate;
-    }
-
-    public void setCurrency(String currency) {
         this.currency = currency;
     }
 }

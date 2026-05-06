@@ -3,11 +3,19 @@ info:
   title: Agricultural Federation API
   description: |
     # Versioning
-    This API uses semantic versioning (MAJOR.MINOR.PATCH). Available versions are :
-    - v0.0.1 (2026-04-21) : POST /collectivities for collectivities creation and POST /members for members creation.
-    - v0.0.2 (2026-04-21) : Full CRUD on collectivities, members, mandates, contributions, accounts, activities, attendances and statistics.
-    - v0.0.3 (2026-04-22) : PATCH /collectivities/{id}/identity — federation assigns a unique number and name to a collectivity (feature J). Once set, neither field can be changed.
-  version: 0.0.3
+    - v0.0.1 (2026-04-21) : POST /collectivities, POST /members
+    - v0.0.2 (2026-04-21) : Full CRUD collectivities, members, mandates, contributions, accounts, activities, attendances, statistics
+    - v0.0.3 (2026-04-22) : PATCH /collectivities/{id}/identity — federation assigns number and name (immutable once set)
+    - v0.0.4 (2026-04-27) :
+        - PUT /collectivities/{id}/informations replaces PATCH /collectivities/{id}/identity
+        - Contribution replaced by MemberPayment (aligned with member_payment table)
+        - MembershipFee becomes a first-class entity (membership_fee table)
+        - CollectivityTransaction added (collectivity_transaction table)
+        - transaction_id exposed on MemberPayment
+        - Account balance is now readOnly (computed from transactions)
+        - Member creation uses real payment objects instead of boolean flags
+        - POST /members/{id}/payments to record member payments
+  version: 0.0.4
 
 servers:
   - url: http://localhost:8080
@@ -16,7 +24,9 @@ tags:
   - name: Collectivities
   - name: Members
   - name: Mandates
-  - name: Contributions
+  - name: Membership Fees
+  - name: Payments
+  - name: Transactions
   - name: Accounts
   - name: Activities
   - name: Attendances
@@ -36,14 +46,18 @@ paths:
         - $ref: '#/components/parameters/page'
         - $ref: '#/components/parameters/size'
       responses:
-        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/PageCollectivity'}}}}
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/PageCollectivity'}
 
     post:
       tags: [Collectivities]
-      summary: Create list of collectivities
+      summary: Create a list of collectivities
       description: |
-        During collectivity request body creation, only members ID are provided to identify members.
-        But the response content includes members information, not only their IDs.
+        Creates one or more collectivities. Member IDs are provided in the request;
+        full member objects are returned in the response.
       operationId: createCollectivities
       requestBody:
         required: true
@@ -51,6 +65,7 @@ paths:
           application/json:
             schema:
               type: array
+              minItems: 1
               items:
                 $ref: '#/components/schemas/CreateCollectivity'
       responses:
@@ -60,10 +75,9 @@ paths:
             application/json:
               schema:
                 type: array
-                items:
-                  $ref: '#/components/schemas/Collectivity'
+                items: {$ref: '#/components/schemas/Collectivity'}
         '400':
-          description: Collectivity without federation approval or structure missing.
+          description: Missing federation approval or invalid structure.
         '404':
           description: Member not found.
 
@@ -106,18 +120,19 @@ paths:
         '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/Collectivity'}}}}
         '404': {$ref: '#/components/responses/NotFound'}
 
-  /collectivities/{id}/identity:
+  # v0.0.4 — replaces PATCH /collectivities/{id}/identity
+  /collectivities/{id}/informations:
     parameters:
       - $ref: '#/components/parameters/id'
-    patch:
+    put:
       tags: [Collectivities]
-      summary: Assign a unique number and name to a collectivity (feature J)
+      summary: Assign a unique number and name to a collectivity
       description: |
-        This endpoint is reserved for the federation.
-        - The system checks that the name is not already taken by another collectivity.
-        - Once a number or a name has been assigned, it cannot be changed.
-          Any attempt to overwrite an already-set value returns **409 Conflict**.
-      operationId: assignCollectivityIdentity
+        Reserved for the federation.
+        - The name must be unique across all collectivities.
+        - Once `number` or `name` is set, it **cannot** be changed (returns **409 Conflict**).
+        - At least one of `number` or `name` must be provided.
+      operationId: assignCollectivityInformations
       requestBody:
         required: true
         content:
@@ -137,14 +152,123 @@ paths:
         '404': {$ref: '#/components/responses/NotFound'}
         '409': {$ref: '#/components/responses/Conflict'}
 
+  # ── Membership Fees ──────────────────────────────────────────
+  /collectivities/{id}/membershipFees:
+    parameters:
+      - $ref: '#/components/parameters/id'
+    get:
+      tags: [Membership Fees]
+      summary: List membership fees of a collectivity
+      operationId: listMembershipFees
+      parameters:
+        - {name: type, in: query, schema: {$ref: '#/components/schemas/MembershipFeeType'}}
+        - {name: status, in: query, schema: {type: string, enum: [ACTIVE, INACTIVE]}}
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/size'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/PageMembershipFee'}
+        '404': {$ref: '#/components/responses/NotFound'}
+
+    post:
+      tags: [Membership Fees]
+      summary: Create a list of membership fees for a collectivity
+      description: |
+        Creates one or more periodic or one-time membership fees.
+        Maps to the `membership_fee` table.
+      operationId: createMembershipFees
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              minItems: 1
+              items:
+                $ref: '#/components/schemas/CreateMembershipFee'
+      responses:
+        '201':
+          description: List of created membership fees
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: '#/components/schemas/MembershipFee'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/UnprocessableEntity'}
+
+  /collectivities/{id}/membershipFees/{feeId}:
+    parameters:
+      - $ref: '#/components/parameters/id'
+      - {name: feeId, in: path, required: true, schema: {type: string}}
+    get:
+      tags: [Membership Fees]
+      summary: Get a membership fee
+      operationId: getMembershipFee
+      responses:
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/MembershipFee'}}}}
+        '404': {$ref: '#/components/responses/NotFound'}
+
+  # ── Transactions ──────────────────────────────────────────────
+  /collectivities/{id}/transactions:
+    parameters:
+      - $ref: '#/components/parameters/id'
+    get:
+      tags: [Transactions]
+      summary: List collectivity transactions for a given period
+      description: |
+        Returns all `collectivity_transaction` records for the collectivity,
+        filtered by date range. Both `startDate` and `endDate` are required.
+      operationId: listCollectivityTransactions
+      parameters:
+        - {name: startDate, in: query, required: true, schema: {type: string, format: date}}
+        - {name: endDate,   in: query, required: true, schema: {type: string, format: date}}
+        - {name: accountCreditedId, in: query, schema: {type: string}}
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/size'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/PageCollectivityTransaction'}
+        '400':
+          description: Missing or invalid date range.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
+        '404': {$ref: '#/components/responses/NotFound'}
+
+  /federation/transactions:
+    get:
+      tags: [Federation]
+      summary: List federation-level transactions
+      operationId: listFederationTransactions
+      parameters:
+        - {name: startDate, in: query, required: true, schema: {type: string, format: date}}
+        - {name: endDate,   in: query, required: true, schema: {type: string, format: date}}
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/size'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/PageCollectivityTransaction'}
+
+  # ── Members ───────────────────────────────────────────────────
   /members:
     post:
       tags: [Members]
-      summary: Create list of members
+      summary: Admit a list of new members
       description: |
-        The following cases must return a bad request exception :
-        - Member with bad referees or without proper payment.
-        - Membership dues not paid or registration fee not paid.
+        Admits one or more members. Each member must include at least one referee
+        and at least one initial payment (maps to `member_payment`).
+        `registrationFeePaid` and `membershipDuesPaid` booleans have been removed;
+        real payment objects must be provided instead.
       operationId: createMembers
       requestBody:
         required: true
@@ -152,24 +276,25 @@ paths:
           application/json:
             schema:
               type: array
+              minItems: 1
               items:
                 $ref: '#/components/schemas/CreateMember'
       responses:
         '201':
-          description: List of created members
+          description: List of admitted members
           content:
             application/json:
               schema:
                 type: array
-                items:
-                  $ref: '#/components/schemas/Member'
+                items: {$ref: '#/components/schemas/Member'}
         '400':
           description: |
-            The following cases must return a bad request exception :
-            - Member with bad referees or without proper payment.
-            - Membership dues not paid or registration fee not paid.
+            Bad request — possible causes:
+            - Missing or invalid referees
+            - No payment provided
+            - Required payment not covered
         '404':
-          description: Either collectivity or member not found.
+          description: Collectivity or referenced member not found.
 
   /collectivities/{id}/members:
     parameters:
@@ -227,6 +352,89 @@ paths:
         '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/Member'}}}}
         '422': {$ref: '#/components/responses/UnprocessableEntity'}
 
+  # ── Member Payments ───────────────────────────────────────────
+  /members/{id}/payments:
+    parameters:
+      - $ref: '#/components/parameters/id'
+    post:
+      tags: [Payments]
+      summary: Record a list of payments made by a member
+      description: |
+        Records one or more `member_payment` entries for the given member.
+        Each payment must reference a valid `membershipFeeId` and a target account.
+      operationId: createMemberPayments
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              minItems: 1
+              items:
+                $ref: '#/components/schemas/CreateMemberPayment'
+      responses:
+        '201':
+          description: List of recorded payments
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: '#/components/schemas/MemberPayment'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/UnprocessableEntity'}
+
+    get:
+      tags: [Payments]
+      summary: List payments made by a member
+      operationId: listMemberPayments
+      parameters:
+        - {name: startDate, in: query, schema: {type: string, format: date}}
+        - {name: endDate,   in: query, schema: {type: string, format: date}}
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/size'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/PageMemberPayment'}
+        '404': {$ref: '#/components/responses/NotFound'}
+
+  /collectivities/{id}/payments:
+    parameters:
+      - $ref: '#/components/parameters/id'
+    get:
+      tags: [Payments]
+      summary: List all member payments received by a collectivity
+      operationId: listCollectivityPayments
+      parameters:
+        - {name: memberId,  in: query, schema: {type: string}}
+        - {name: feeId,     in: query, schema: {type: string}}
+        - {name: startDate, in: query, schema: {type: string, format: date}}
+        - {name: endDate,   in: query, schema: {type: string, format: date}}
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/size'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/PageMemberPayment'}
+        '404': {$ref: '#/components/responses/NotFound'}
+
+  /collectivities/{id}/payments/{paymentId}:
+    parameters:
+      - $ref: '#/components/parameters/id'
+      - {name: paymentId, in: path, required: true, schema: {type: string}}
+    get:
+      tags: [Payments]
+      summary: Get a specific member payment
+      operationId: getMemberPayment
+      responses:
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/MemberPayment'}}}}
+        '404': {$ref: '#/components/responses/NotFound'}
+
+  # ── Mandates ──────────────────────────────────────────────────
   /collectivities/{id}/mandates:
     parameters:
       - $ref: '#/components/parameters/id'
@@ -263,47 +471,7 @@ paths:
         '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/Mandate'}}}}
         '404': {$ref: '#/components/responses/NotFound'}
 
-  /collectivities/{id}/contributions:
-    parameters:
-      - $ref: '#/components/parameters/id'
-    get:
-      tags: [Contributions]
-      summary: List contributions of a collectivity
-      operationId: listContributions
-      parameters:
-        - {name: memberId, in: query, schema: {type: string}}
-        - {name: type, in: query, schema: {$ref: '#/components/schemas/ContributionType'}}
-        - {name: startDate, in: query, schema: {type: string, format: date}}
-        - {name: endDate, in: query, schema: {type: string, format: date}}
-        - $ref: '#/components/parameters/page'
-        - $ref: '#/components/parameters/size'
-      responses:
-        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/PageContribution'}}}}
-    post:
-      tags: [Contributions]
-      summary: Record a contribution payment
-      operationId: recordContribution
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: {$ref: '#/components/schemas/CreateContribution'}
-      responses:
-        '201': {description: Created, content: {application/json: {schema: {$ref: '#/components/schemas/Contribution'}}}}
-        '422': {$ref: '#/components/responses/UnprocessableEntity'}
-
-  /collectivities/{id}/contributions/{contributionId}:
-    parameters:
-      - $ref: '#/components/parameters/id'
-      - {name: contributionId, in: path, required: true, schema: {type: string}}
-    get:
-      tags: [Contributions]
-      summary: Get a contribution
-      operationId: getContribution
-      responses:
-        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/Contribution'}}}}
-        '404': {$ref: '#/components/responses/NotFound'}
-
+  # ── Accounts ──────────────────────────────────────────────────
   /collectivities/{id}/accounts:
     parameters:
       - $ref: '#/components/parameters/id'
@@ -317,7 +485,7 @@ paths:
         '200': {description: OK, content: {application/json: {schema: {type: array, items: {$ref: '#/components/schemas/Account'}}}}}
     post:
       tags: [Accounts]
-      summary: Create an account
+      summary: Create an account for a collectivity
       operationId: createAccountCollectivity
       requestBody:
         required: true
@@ -339,25 +507,15 @@ paths:
       responses:
         '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/Account'}}}}
         '404': {$ref: '#/components/responses/NotFound'}
-    put:
-      tags: [Accounts]
-      summary: Update account balance
-      operationId: updateAccountCollectivity
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: {$ref: '#/components/schemas/UpdateAccountBalance'}
-      responses:
-        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/Account'}}}}
-        '404': {$ref: '#/components/responses/NotFound'}
+    # NOTE: PUT /accounts/{id} (manual balance update) removed in v0.0.4.
+    # Balance is now readOnly and computed from member_payment + collectivity_transaction.
 
   /collectivities/{id}/financialAccounts:
     parameters:
       - $ref: '#/components/parameters/id'
     get:
       tags: [Accounts]
-      summary: List financial accounts with balance at a given date
+      summary: List financial accounts with computed balance at a given date
       operationId: listFinancialAccountsAtDate
       parameters:
         - {name: at, in: query, schema: {type: string, format: date}}
@@ -368,8 +526,7 @@ paths:
             application/json:
               schema:
                 type: array
-                items:
-                  $ref: '#/components/schemas/AccountBalance'
+                items: {$ref: '#/components/schemas/AccountBalance'}
         '404': {$ref: '#/components/responses/NotFound'}
 
   /federation/accounts:
@@ -404,19 +561,8 @@ paths:
       responses:
         '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/Account'}}}}
         '404': {$ref: '#/components/responses/NotFound'}
-    put:
-      tags: [Federation]
-      summary: Update federation account balance
-      operationId: updateAccountFederation
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: {$ref: '#/components/schemas/UpdateAccountBalance'}
-      responses:
-        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/Account'}}}}
-        '404': {$ref: '#/components/responses/NotFound'}
 
+  # ── Activities ────────────────────────────────────────────────
   /collectivities/{id}/schedule:
     parameters:
       - $ref: '#/components/parameters/id'
@@ -555,6 +701,7 @@ paths:
         '204': {description: Deleted}
         '404': {$ref: '#/components/responses/NotFound'}
 
+  # ── Attendances ───────────────────────────────────────────────
   /activities/{activityId}/attendances:
     parameters:
       - {name: activityId, in: path, required: true, schema: {type: string}}
@@ -601,6 +748,7 @@ paths:
         '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/Attendance'}}}}
         '404': {$ref: '#/components/responses/NotFound'}
 
+  # ── Statistics ────────────────────────────────────────────────
   /collectivities/{id}/statistics:
     parameters:
       - $ref: '#/components/parameters/id'
@@ -610,7 +758,7 @@ paths:
       operationId: getMonthlyReport
       parameters:
         - {name: month, in: query, required: true, schema: {type: integer, minimum: 1, maximum: 12}}
-        - {name: year, in: query, required: true, schema: {type: integer}}
+        - {name: year,  in: query, required: true, schema: {type: integer}}
       responses:
         '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/CollectivityStatistics'}}}}
         '404': {$ref: '#/components/responses/NotFound'}
@@ -624,7 +772,7 @@ paths:
       operationId: getMembersStatistics
       parameters:
         - {name: startDate, in: query, required: true, schema: {type: string, format: date}}
-        - {name: endDate, in: query, required: true, schema: {type: string, format: date}}
+        - {name: endDate,   in: query, required: true, schema: {type: string, format: date}}
         - $ref: '#/components/parameters/page'
         - $ref: '#/components/parameters/size'
       responses:
@@ -641,11 +789,31 @@ paths:
       operationId: getMemberStatistics
       parameters:
         - {name: startDate, in: query, required: true, schema: {type: string, format: date}}
-        - {name: endDate, in: query, required: true, schema: {type: string, format: date}}
+        - {name: endDate,   in: query, required: true, schema: {type: string, format: date}}
       responses:
         '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/MemberStatistics'}}}}
         '404': {$ref: '#/components/responses/NotFound'}
 
+  # v0.0.4 — financial statistics
+  /collectivities/{id}/statistics/financial:
+    parameters:
+      - $ref: '#/components/parameters/id'
+    get:
+      tags: [Statistics]
+      summary: Financial statistics (total payments, transfers, per account)
+      operationId: getFinancialStatistics
+      parameters:
+        - {name: startDate, in: query, schema: {type: string, format: date}}
+        - {name: endDate,   in: query, schema: {type: string, format: date}}
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/FinancialStatistics'}
+        '404': {$ref: '#/components/responses/NotFound'}
+
+  # ── Federation ────────────────────────────────────────────────
   /federation:
     get:
       tags: [Federation]
@@ -696,6 +864,9 @@ paths:
         '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/FederationMandate'}}}}
         '404': {$ref: '#/components/responses/NotFound'}
 
+# ══════════════════════════════════════════════════════════════════
+# COMPONENTS
+# ══════════════════════════════════════════════════════════════════
 components:
 
   parameters:
@@ -726,7 +897,7 @@ components:
           schema: {$ref: '#/components/schemas/Error'}
     Conflict:
       description: |
-        The number or name is already assigned to this collectivity and cannot be changed,
+        The number or name is already assigned and cannot be changed,
         or the name is already used by another collectivity.
       content:
         application/json:
@@ -734,29 +905,29 @@ components:
 
   schemas:
 
+    # ── Enums ──────────────────────────────────────────────────
     MemberOccupation:
       type: string
       enum: [PRESIDENT, VICE_PRESIDENT, TREASURER, SECRETARY, SENIOR, JUNIOR]
 
     Gender:
       type: string
+      # Aligned with DB constraint: MALE / FEMALE (migration script updated gender check)
       enum: [MALE, FEMALE]
 
     AccountType:
       type: string
       enum: [CASH, BANK, MOBILE_MONEY]
 
-    ContributionType:
-      type: string
-      enum: [MONTHLY, ANNUAL, OCCASIONAL]
-
     PaymentMethod:
       type: string
-      enum: [CASH, BANK_TRANSFER, MOBILE_MONEY]
+      # Aligned with DB migration: CASH, MOBILE_BANKING, BANK_TRANSFER, MOBILE_MONEY
+      enum: [CASH, BANK_TRANSFER, MOBILE_MONEY, MOBILE_BANKING]
 
     ActivityType:
       type: string
-      enum: [GENERAL_ASSEMBLY, JUNIOR_TRAINING, EXCEPTIONAL, FEDERATION]
+      # Aligned with DB: GENERAL_MEETING (was GENERAL_ASSEMBLY in v0.0.3)
+      enum: [GENERAL_MEETING, JUNIOR_TRAINING, EXCEPTIONAL, FEDERATION]
 
     AttendanceStatus:
       type: string
@@ -770,43 +941,185 @@ components:
       type: string
       enum: [ORANGE_MONEY, MVOLA, AIRTEL_MONEY]
 
+    # v0.0.4 — NEW: replaces ContributionType
+    MembershipFeeType:
+      type: string
+      # Aligned with DB frequency constraint
+      enum: [MONTHLY, ANNUALLY, WEEKLY, ONE_TIME, PUNCTUALLY]
+
+    # ── Membership Fee (v0.0.4) ────────────────────────────────
+    MembershipFee:
+      type: object
+      properties:
+        id:
+          type: string
+        collectivityId:
+          type: string
+        label:
+          type: string
+        type:
+          $ref: '#/components/schemas/MembershipFeeType'
+        amount:
+          type: number
+          minimum: 0
+        eligibleFrom:
+          type: string
+          format: date
+        status:
+          type: string
+          enum: [ACTIVE, INACTIVE]
+
+    CreateMembershipFee:
+      type: object
+      required: [label, amount, type, eligibleFrom]
+      properties:
+        label:
+          type: string
+        amount:
+          type: number
+          minimum: 0
+        type:
+          $ref: '#/components/schemas/MembershipFeeType'
+        eligibleFrom:
+          type: string
+          format: date
+          description: Maps to membership_fee.eligible_from
+
+    # ── Member Payment (v0.0.4 — replaces Contribution) ────────
+    MemberPayment:
+      type: object
+      properties:
+        id:
+          type: string
+        memberId:
+          type: string
+        membershipFeeId:
+          type: string
+          description: FK → membership_fee.id
+        accountCreditedId:
+          type: string
+          description: FK → account.id (account credited on payment)
+        amount:
+          type: number
+        paymentDate:
+          type: string
+          format: date
+          description: Maps to member_payment.creation_date
+        paymentMethod:
+          $ref: '#/components/schemas/PaymentMethod'
+        transactionId:
+          type: string
+          description: External transaction reference (e.g. mobile money ID)
+
+    CreateMemberPayment:
+      type: object
+      required: [membershipFeeId, amount, paymentMethod, accountCreditedId]
+      properties:
+        membershipFeeId:
+          type: string
+        accountCreditedId:
+          type: string
+        amount:
+          type: number
+          minimum: 0.01
+        paymentDate:
+          type: string
+          format: date
+        paymentMethod:
+          $ref: '#/components/schemas/PaymentMethod'
+        transactionId:
+          type: string
+
+    # ── Collectivity Transaction (v0.0.4) ──────────────────────
+    CollectivityTransaction:
+      type: object
+      properties:
+        id:
+          type: string
+        collectivityId:
+          type: string
+        memberDebitedId:
+          type: string
+          description: FK → member.id (member who made the payment)
+        accountCreditedId:
+          type: string
+          description: FK → account.id
+        amount:
+          type: number
+        paymentMethod:
+          $ref: '#/components/schemas/PaymentMethod'
+        transactionDate:
+          type: string
+          format: date
+          description: Maps to collectivity_transaction.creation_date
+
+    # ── Financial Statistics (v0.0.4) ──────────────────────────
+    FinancialStatistics:
+      type: object
+      properties:
+        totalPayments:
+          type: number
+          description: Total amount of all member payments
+        totalTransferred:
+          type: number
+          description: Total amount transferred to federation
+        totalByAccount:
+          type: array
+          items:
+            type: object
+            properties:
+              accountId:
+                type: string
+              amount:
+                type: number
+
+    # ── Member ─────────────────────────────────────────────────
     MemberIdentifier:
       type: string
 
     MemberInformation:
       type: object
       properties:
-        firstName: {type: string}
-        lastName: {type: string}
-        birthDate: {type: string, format: date}
-        gender: {$ref: '#/components/schemas/Gender'}
-        address: {type: string}
-        profession: {type: string}
-        phoneNumber: {type: string}
-        email: {type: string, format: email}
-        occupation: {$ref: '#/components/schemas/MemberOccupation'}
+        firstName:    {type: string}
+        lastName:     {type: string}
+        birthDate:    {type: string, format: date}
+        gender:       {$ref: '#/components/schemas/Gender'}
+        address:      {type: string}
+        profession:   {type: string}
+        phoneNumber:  {type: string}
+        email:        {type: string, format: email}
+        occupation:   {$ref: '#/components/schemas/MemberOccupation'}
 
     CreateMember:
       allOf:
         - $ref: '#/components/schemas/MemberInformation'
       type: object
+      required: [collectivityIdentifier, referees, payments]
       properties:
-        collectivityIdentifier: {type: string}
+        collectivityIdentifier:
+          type: string
         referees:
           type: array
+          minItems: 1
           items: {$ref: '#/components/schemas/MemberIdentifier'}
-        registrationFeePaid: {type: boolean}
-        membershipDuesPaid: {type: boolean}
+          description: At least one referee (maps to adhesion_referent table)
+        # v0.0.4 — registrationFeePaid + membershipDuesPaid removed
+        # Real payment objects required instead
+        payments:
+          type: array
+          minItems: 1
+          items: {$ref: '#/components/schemas/CreateMemberPayment'}
+          description: Initial payments at admission (maps to member_payment)
 
     Member:
       allOf:
         - $ref: '#/components/schemas/MemberInformation'
       type: object
       properties:
-        id: {$ref: '#/components/schemas/MemberIdentifier'}
+        id:           {$ref: '#/components/schemas/MemberIdentifier'}
         collectivityId: {type: string}
-        active: {type: boolean}
-        memberSince: {type: string, format: date}
+        active:       {type: boolean}
+        memberSince:  {type: string, format: date}
         referees:
           type: array
           items: {$ref: '#/components/schemas/Member'}
@@ -826,35 +1139,32 @@ components:
         transferDate: {type: string, format: date}
         reason: {type: string}
 
-    MemberIdentifierRef:
-      type: object
-      properties:
-        id: {$ref: '#/components/schemas/MemberIdentifier'}
-
+    # ── Collectivity ───────────────────────────────────────────
     CreateCollectivityStructure:
       type: object
       properties:
-        president: {$ref: '#/components/schemas/MemberIdentifier'}
+        president:     {$ref: '#/components/schemas/MemberIdentifier'}
         vicePresident: {$ref: '#/components/schemas/MemberIdentifier'}
-        treasurer: {$ref: '#/components/schemas/MemberIdentifier'}
-        secretary: {$ref: '#/components/schemas/MemberIdentifier'}
+        treasurer:     {$ref: '#/components/schemas/MemberIdentifier'}
+        secretary:     {$ref: '#/components/schemas/MemberIdentifier'}
 
     CollectivityStructure:
       type: object
       properties:
-        president: {$ref: '#/components/schemas/Member'}
+        president:     {$ref: '#/components/schemas/Member'}
         vicePresident: {$ref: '#/components/schemas/Member'}
-        treasurer: {$ref: '#/components/schemas/Member'}
-        secretary: {$ref: '#/components/schemas/Member'}
+        treasurer:     {$ref: '#/components/schemas/Member'}
+        secretary:     {$ref: '#/components/schemas/Member'}
 
     CreateCollectivity:
       type: object
+      required: [location, specialty, creationDate, structure, members]
       properties:
-        location: {type: string}
-        specialty: {type: string}
-        creationDate: {type: string, format: date}
-        federationApproval: {type: boolean}
-        structure: {$ref: '#/components/schemas/CreateCollectivityStructure'}
+        location:          {type: string}
+        specialty:         {type: string}
+        creationDate:      {type: string, format: date}
+        federationApproval: {type: boolean, default: false}
+        structure:         {$ref: '#/components/schemas/CreateCollectivityStructure'}
         members:
           type: array
           minItems: 10
@@ -863,14 +1173,14 @@ components:
     Collectivity:
       type: object
       properties:
-        id: {type: string}
-        number: {type: string}
-        name: {type: string}
-        location: {type: string}
-        specialty: {type: string}
-        creationDate: {type: string, format: date}
+        id:                {type: string}
+        number:            {type: string}
+        name:              {type: string}
+        location:          {type: string}
+        specialty:         {type: string}
+        creationDate:      {type: string, format: date}
         federationApproval: {type: boolean}
-        structure: {$ref: '#/components/schemas/CollectivityStructure'}
+        structure:         {$ref: '#/components/schemas/CollectivityStructure'}
         members:
           type: array
           items: {$ref: '#/components/schemas/Member'}
@@ -880,37 +1190,35 @@ components:
       required: [approved]
       properties:
         approved: {type: boolean}
-        comment: {type: string}
+        comment:  {type: string}
 
     AssignIdentityRequest:
       type: object
-      description: |
-        At least one of `number` or `name` must be provided.
-        Once a field is set on the collectivity, sending it again returns 409 Conflict.
-        The `name` must be unique across all collectivities (checked by the system).
+      description: At least one of `number` or `name` must be provided. Immutable once set.
       properties:
         number:
           type: string
-          description: Unique number assigned by the federation (e.g. "COLL-042").
+          description: Unique federation number (e.g. "COLL-042")
         name:
           type: string
-          description: Unique name assigned by the federation (e.g. "Collectivité Rizicole d'Antananarivo").
+          description: Unique federation name
 
+    # ── Mandates ───────────────────────────────────────────────
     MemberOccupationRef:
       type: object
       required: [memberId, occupation]
       properties:
-        memberId: {type: string}
+        memberId:   {type: string}
         occupation: {$ref: '#/components/schemas/MemberOccupation'}
 
     Mandate:
       type: object
       properties:
-        id: {type: string}
+        id:             {type: string}
         collectivityId: {type: string}
-        year: {type: integer}
-        startDate: {type: string, format: date}
-        endDate: {type: string, format: date}
+        year:           {type: integer}
+        startDate:      {type: string, format: date}
+        endDate:        {type: string, format: date}
         occupations:
           type: array
           items: {$ref: '#/components/schemas/MemberOccupationRef'}
@@ -928,9 +1236,9 @@ components:
     FederationMandate:
       type: object
       properties:
-        id: {type: string}
+        id:        {type: string}
         startDate: {type: string, format: date}
-        endDate: {type: string, format: date}
+        endDate:   {type: string, format: date}
         occupations:
           type: array
           items: {$ref: '#/components/schemas/MemberOccupationRef'}
@@ -945,73 +1253,58 @@ components:
           minItems: 4
           items: {$ref: '#/components/schemas/MemberOccupationRef'}
 
-    Contribution:
-      type: object
-      properties:
-        id: {type: string}
-        collectivityId: {type: string}
-        memberId: {type: string}
-        amount: {type: number}
-        paymentDate: {type: string, format: date}
-        paymentMethod: {$ref: '#/components/schemas/PaymentMethod'}
-        type: {$ref: '#/components/schemas/ContributionType'}
-        reason: {type: string}
-        amountForwardedToFederation: {type: number, readOnly: true}
-
-    CreateContribution:
-      type: object
-      required: [memberId, amount, paymentDate, paymentMethod, type]
-      properties:
-        memberId: {type: string}
-        amount: {type: number}
-        paymentDate: {type: string, format: date}
-        paymentMethod: {$ref: '#/components/schemas/PaymentMethod'}
-        type: {$ref: '#/components/schemas/ContributionType'}
-        reason: {type: string}
-
+    # ── Accounts ───────────────────────────────────────────────
     Account:
       type: object
       properties:
-        id: {type: string}
-        type: {$ref: '#/components/schemas/AccountType'}
-        balance: {type: number}
-        balanceDate: {type: string, format: date}
-        currency: {type: string, default: MGA}
-        holder: {type: string}
-        bank: {$ref: '#/components/schemas/Bank'}
+        id:           {type: string}
+        type:         {$ref: '#/components/schemas/AccountType'}
+        # v0.0.4: balance is readOnly — computed from member_payment + collectivity_transaction
+        balance:
+          type: number
+          readOnly: true
+        balanceDate:
+          type: string
+          format: date
+          readOnly: true
+        currency:     {type: string, default: MGA}
+        holder:       {type: string}
+        bank:         {$ref: '#/components/schemas/Bank'}
         accountNumber: {type: string, pattern: '^\d{23}$'}
         mobileMoneyService: {$ref: '#/components/schemas/MobileMoneyService'}
-        phoneNumber: {type: string}
+        phoneNumber:  {type: string}
 
     CreateAccount:
       type: object
       required: [type]
       properties:
-        type: {$ref: '#/components/schemas/AccountType'}
+        type:           {$ref: '#/components/schemas/AccountType'}
         initialBalance: {type: number, default: 0}
-        holder: {type: string}
-        bank: {$ref: '#/components/schemas/Bank'}
-        accountNumber: {type: string, pattern: '^\d{23}$'}
+        holder:         {type: string}
+        bank:           {$ref: '#/components/schemas/Bank'}
+        accountNumber:  {type: string, pattern: '^\d{23}$'}
         mobileMoneyService: {$ref: '#/components/schemas/MobileMoneyService'}
-        phoneNumber: {type: string}
+        phoneNumber:    {type: string}
 
-    UpdateAccountBalance:
+    AccountBalance:
       type: object
-      required: [balance, balanceDate]
       properties:
-        balance: {type: number}
+        accountId:   {type: string}
+        type:        {$ref: '#/components/schemas/AccountType'}
+        balance:     {type: number, readOnly: true}
         balanceDate: {type: string, format: date}
 
+    # ── Activities ─────────────────────────────────────────────
     Activity:
       type: object
       properties:
-        id: {type: string}
+        id:             {type: string}
         collectivityId: {type: string, nullable: true}
-        type: {$ref: '#/components/schemas/ActivityType'}
-        title: {type: string}
-        description: {type: string}
-        date: {type: string, format: date-time}
-        mandatory: {type: boolean}
+        type:           {$ref: '#/components/schemas/ActivityType'}
+        title:          {type: string}
+        description:    {type: string}
+        date:           {type: string, format: date-time}
+        mandatory:      {type: boolean}
         targetOccupations:
           type: array
           items: {$ref: '#/components/schemas/MemberOccupation'}
@@ -1020,10 +1313,10 @@ components:
       type: object
       required: [title, date, mandatory]
       properties:
-        title: {type: string}
+        title:       {type: string}
         description: {type: string}
-        date: {type: string, format: date-time}
-        mandatory: {type: boolean}
+        date:        {type: string, format: date-time}
+        mandatory:   {type: boolean}
         targetOccupations:
           type: array
           items: {$ref: '#/components/schemas/MemberOccupation'}
@@ -1032,10 +1325,10 @@ components:
       type: object
       required: [title, date, mandatory]
       properties:
-        title: {type: string}
+        title:       {type: string}
         description: {type: string}
-        date: {type: string, format: date-time}
-        mandatory: {type: boolean}
+        date:        {type: string, format: date-time}
+        mandatory:   {type: boolean}
         invitedCollectivityIds:
           type: array
           items: {type: string}
@@ -1043,10 +1336,10 @@ components:
     Schedule:
       type: object
       properties:
-        collectivityId: {type: string}
-        year: {type: integer}
-        generalAssemblyRule: {type: string}
-        juniorTrainingRule: {type: string}
+        collectivityId:        {type: string}
+        year:                  {type: integer}
+        generalAssemblyRule:   {type: string}
+        juniorTrainingRule:    {type: string}
         generalAssemblyDates:
           type: array
           readOnly: true
@@ -1060,52 +1353,56 @@ components:
       type: object
       required: [year, generalAssemblyRule, juniorTrainingRule]
       properties:
-        year: {type: integer}
+        year:                {type: integer}
         generalAssemblyRule: {type: string}
-        juniorTrainingRule: {type: string}
+        juniorTrainingRule:  {type: string}
 
+    # ── Attendances ────────────────────────────────────────────
     Attendance:
       type: object
       properties:
-        activityId: {type: string}
-        memberId: {type: string}
-        status: {$ref: '#/components/schemas/AttendanceStatus'}
-        isVisitor: {type: boolean, default: false}
+        activityId:    {type: string}
+        memberId:      {type: string}
+        status:        {$ref: '#/components/schemas/AttendanceStatus'}
+        isVisitor:     {type: boolean, default: false}
         absenceReason: {type: string, nullable: true}
 
     CreateAttendance:
       type: object
       required: [memberId, status]
       properties:
-        memberId: {type: string}
-        status: {$ref: '#/components/schemas/AttendanceStatus'}
+        memberId:      {type: string}
+        status:        {$ref: '#/components/schemas/AttendanceStatus'}
         absenceReason: {type: string}
 
+    # ── Statistics ─────────────────────────────────────────────
     CollectivityStatistics:
       type: object
       properties:
-        collectivityId: {type: string}
-        month: {type: integer}
-        year: {type: integer}
+        collectivityId:       {type: string}
+        month:                {type: integer}
+        year:                 {type: integer}
         attendanceRatePercent: {type: number}
-        activeMembers: {type: integer}
-        activitiesHeld: {type: integer}
+        activeMembers:        {type: integer}
+        activitiesHeld:       {type: integer}
 
     MemberStatistics:
       type: object
       properties:
-        memberId: {type: string}
-        startDate: {type: string, format: date}
-        endDate: {type: string, format: date}
+        memberId:              {type: string}
+        startDate:             {type: string, format: date}
+        endDate:               {type: string, format: date}
         attendanceRatePercent: {type: number}
-        totalPaidMGA: {type: number}
-        totalUnpaidMGA: {type: number}
+        totalPaidMGA:          {type: number}
+        totalUnpaidMGA:        {type: number}
 
+    # ── Federation ─────────────────────────────────────────────
     Federation:
       type: object
       properties:
-        id: {type: string}
+        id:   {type: string}
         name: {type: string}
+        # DB: reverse_contribution_percentage
         contributionForwardingPercent: {type: number}
 
     UpdateFederation:
@@ -1117,19 +1414,20 @@ components:
           minimum: 0
           maximum: 100
 
+    # ── Shared ─────────────────────────────────────────────────
     Error:
       type: object
       properties:
-        code: {type: string}
+        code:    {type: string}
         message: {type: string}
 
     Page:
       type: object
       properties:
-        page: {type: integer}
-        size: {type: integer}
+        page:          {type: integer}
+        size:          {type: integer}
         totalElements: {type: integer}
-        totalPages: {type: integer}
+        totalPages:    {type: integer}
 
     PageCollectivity:
       allOf:
@@ -1145,12 +1443,27 @@ components:
           properties:
             content: {type: array, items: {$ref: '#/components/schemas/Member'}}
 
-    PageContribution:
+    # v0.0.4 — PageContribution removed, replaced by PageMemberPayment
+    PageMemberPayment:
       allOf:
         - $ref: '#/components/schemas/Page'
         - type: object
           properties:
-            content: {type: array, items: {$ref: '#/components/schemas/Contribution'}}
+            content: {type: array, items: {$ref: '#/components/schemas/MemberPayment'}}
+
+    PageMembershipFee:
+      allOf:
+        - $ref: '#/components/schemas/Page'
+        - type: object
+          properties:
+            content: {type: array, items: {$ref: '#/components/schemas/MembershipFee'}}
+
+    PageCollectivityTransaction:
+      allOf:
+        - $ref: '#/components/schemas/Page'
+        - type: object
+          properties:
+            content: {type: array, items: {$ref: '#/components/schemas/CollectivityTransaction'}}
 
     PageActivity:
       allOf:

@@ -7,6 +7,7 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Repository
 public class CollectivityRepository {
@@ -18,22 +19,38 @@ public class CollectivityRepository {
     }
 
     public Collectivity save(Collectivity c) throws SQLException {
-        if (c.getId() == 0) {
-            String sql = "INSERT INTO collectivity (number, name, agricultural_specialty, city, creation_date, opening_authorization) VALUES (?, ?, ?, ?, ?, ?) RETURNING id";
+
+        if (c.getId() == null || c.getId().isBlank()) {
+            // ✅ FIX : la colonne id est VARCHAR(50) sans DEFAULT côté DB
+            // → on génère l'UUID ici en Java avant l'INSERT
+            c.setId(UUID.randomUUID().toString());
+
+            String sql = """
+                INSERT INTO collectivity
+                    (id, number, name, agricultural_specialty, city, creation_date, opening_authorization)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """;
+
             try (PreparedStatement ps = connection.prepareStatement(sql)) {
-                ps.setString(1, c.getNumber());
-                ps.setString(2, c.getName());
-                ps.setString(3, c.getAgriculturalSpecialty());
-                ps.setString(4, c.getCity());
-                ps.setDate(5, Date.valueOf(c.getCreationDate()));
-                ps.setBoolean(6, c.isOpeningAuthorization());
-                ResultSet rs = ps.executeQuery();
-                if (rs.next()) {
-                    c.setId(rs.getInt(1));
-                }
+                ps.setString(1, c.getId());
+                ps.setString(2, c.getNumber());
+                ps.setString(3, c.getName());
+                ps.setString(4, c.getAgriculturalSpecialty());
+                ps.setString(5, c.getCity());
+                ps.setDate(6, Date.valueOf(c.getCreationDate()));
+                ps.setBoolean(7, c.isOpeningAuthorization());
+                ps.executeUpdate();
             }
+
         } else {
-            String sql = "UPDATE collectivity SET number = ?, name = ?, agricultural_specialty = ?, city = ?, creation_date = ?, opening_authorization = ? WHERE id = ?";
+
+            String sql = """
+                UPDATE collectivity
+                SET number = ?, name = ?, agricultural_specialty = ?,
+                    city = ?, creation_date = ?, opening_authorization = ?
+                WHERE id = ?
+                """;
+
             try (PreparedStatement ps = connection.prepareStatement(sql)) {
                 ps.setString(1, c.getNumber());
                 ps.setString(2, c.getName());
@@ -41,17 +58,18 @@ public class CollectivityRepository {
                 ps.setString(4, c.getCity());
                 ps.setDate(5, Date.valueOf(c.getCreationDate()));
                 ps.setBoolean(6, c.isOpeningAuthorization());
-                ps.setInt(7, c.getId());
+                ps.setString(7, c.getId());
                 ps.executeUpdate();
             }
         }
+
         return c;
     }
 
-    public Optional<Collectivity> findById(int id) throws SQLException {
+    public Optional<Collectivity> findById(String id) throws SQLException {
         String sql = "SELECT * FROM collectivity WHERE id = ?";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
-            ps.setInt(1, id);
+            ps.setString(1, id);
             ResultSet rs = ps.executeQuery();
             if (rs.next()) {
                 return Optional.of(mapRow(rs));
@@ -98,7 +116,7 @@ public class CollectivityRepository {
 
     private Collectivity mapRow(ResultSet rs) throws SQLException {
         Collectivity c = new Collectivity();
-        c.setId(rs.getInt("id"));
+        c.setId(rs.getString("id"));
         c.setNumber(rs.getString("number"));
         c.setName(rs.getString("name"));
         c.setAgriculturalSpecialty(rs.getString("agricultural_specialty"));

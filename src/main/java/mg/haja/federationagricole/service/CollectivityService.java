@@ -22,8 +22,8 @@ public class CollectivityService {
     private final MemberRepository memberRepository;
     private final FinancialAccountRepository accountRepository;
 
-    public CollectivityService(CollectivityRepository repository, 
-                               MemberRepository memberRepository, 
+    public CollectivityService(CollectivityRepository repository,
+                               MemberRepository memberRepository,
                                FinancialAccountRepository accountRepository) {
         this.repository = repository;
         this.memberRepository = memberRepository;
@@ -32,11 +32,12 @@ public class CollectivityService {
 
     public Collectivity getCollectivityById(String id) {
         try {
-            Collectivity c = repository.findById(Integer.parseInt(id))
+            Collectivity c = repository.findById(id)
                     .orElseThrow(() -> new RuntimeException("Collectivity not found"));
-            
+
             c.setMembers(memberRepository.findByCollectivityId(c.getId()));
             return c;
+
         } catch (SQLException e) {
             throw new RuntimeException("Database error", e);
         }
@@ -46,18 +47,22 @@ public class CollectivityService {
         try {
             List<FinancialAccount> accounts = accountRepository.findByCollectivityId(Integer.parseInt(collectivityId));
             List<AccountWithBalance> result = new ArrayList<>();
-            
+
             for (FinancialAccount acc : accounts) {
                 AccountWithBalance dto = new AccountWithBalance();
                 dto.setAccount(acc);
+
                 if (at != null) {
                     dto.setBalanceAtDate(accountRepository.getBalanceAtDate(Integer.parseInt(acc.getId()), at));
                 } else {
                     dto.setBalanceAtDate(acc.getAmount());
                 }
+
                 result.add(dto);
             }
+
             return result;
+
         } catch (SQLException e) {
             throw new RuntimeException("Database error", e);
         }
@@ -80,7 +85,6 @@ public class CollectivityService {
         }
 
         Collectivity c = new Collectivity();
-
         c.setCity(request.city);
         c.setAgriculturalSpecialty(request.agriculturalSpecialty);
         c.setCreationDate(request.creationDate);
@@ -96,7 +100,7 @@ public class CollectivityService {
     public Collectivity assignInformations(String id, AssignIdentificationRequest request) {
 
         try {
-            Collectivity collectivity = repository.findById(Integer.parseInt(id))
+            Collectivity collectivity = repository.findById(id)
                     .orElseThrow(() -> new RuntimeException("Collectivity not found"));
 
             if (collectivity.getName() != null || collectivity.getNumber() != null) {
@@ -115,6 +119,7 @@ public class CollectivityService {
             collectivity.setNumber(request.getNumber());
 
             return repository.save(collectivity);
+
         } catch (SQLException e) {
             throw new RuntimeException("Database error", e);
         }
