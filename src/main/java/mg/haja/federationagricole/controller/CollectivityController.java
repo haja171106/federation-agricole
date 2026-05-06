@@ -4,6 +4,7 @@ import mg.haja.federationagricole.DTO.AssignIdentificationRequest;
 import mg.haja.federationagricole.DTO.CreateCollectivityRequest;
 import mg.haja.federationagricole.DTO.AccountWithBalance;
 import mg.haja.federationagricole.Entity.Collectivity;
+import mg.haja.federationagricole.Entity.CollectivityTransaction;
 import mg.haja.federationagricole.service.CollectivityService;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
@@ -33,6 +34,18 @@ public class CollectivityController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate at
     ) {
         return ResponseEntity.ok(service.getAccountsWithBalance(id, at));
+    }
+    @GetMapping("/{id}/transactions")
+    public ResponseEntity<List<CollectivityTransaction>> listCollectivityTransactions(
+            @PathVariable String id,
+            @RequestParam LocalDate startDate,
+            @RequestParam LocalDate endDate,
+            @RequestParam(required = false) String accountCreditedId) {
+
+        List<CollectivityTransaction> transactions = service.getCollectivityTransactions(
+                id, startDate, endDate, accountCreditedId);
+
+        return ResponseEntity.ok(transactions);
     }
 
     @PostMapping

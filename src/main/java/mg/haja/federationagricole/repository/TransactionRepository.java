@@ -50,11 +50,17 @@ public class TransactionRepository {
                 tx.setPaymentMode(PaymentMode.valueOf(rs.getString("payment_mode")));
                 tx.setMemberDebitedId(String.valueOf(rs.getObject("member_debited_id")));
 
-                FinancialAccount account = accountRepository.findById(
-                        String.valueOf(rs.getObject("account_credited_id"))
-                );
-
-                tx.setAccountCredited(account);
+                String accountId = rs.getString("account_credited_id");
+                if (accountId != null && !accountId.isEmpty()) {
+                    try {
+                        FinancialAccount account = accountRepository.findById(accountId);
+                        tx.setAccountCredited(account);
+                    } catch (Exception e) {
+                        System.out.println("WARNING: Cannot load account " + accountId + ": " + e.getMessage());
+                    }
+                } else {
+                    tx.setAccountCredited(null);
+                }
 
                 transactions.add(tx);
             }

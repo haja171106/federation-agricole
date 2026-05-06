@@ -21,8 +21,6 @@ public class CollectivityRepository {
     public Collectivity save(Collectivity c) throws SQLException {
 
         if (c.getId() == null || c.getId().isBlank()) {
-            // ✅ FIX : la colonne id est VARCHAR(50) sans DEFAULT côté DB
-            // → on génère l'UUID ici en Java avant l'INSERT
             c.setId(UUID.randomUUID().toString());
 
             String sql = """

@@ -4,10 +4,12 @@ import mg.haja.federationagricole.DTO.AssignIdentificationRequest;
 import mg.haja.federationagricole.DTO.CreateCollectivityRequest;
 import mg.haja.federationagricole.DTO.AccountWithBalance;
 import mg.haja.federationagricole.Entity.Collectivity;
+import mg.haja.federationagricole.Entity.CollectivityTransaction;
 import mg.haja.federationagricole.Entity.FinancialAccount;
 import mg.haja.federationagricole.repository.CollectivityRepository;
 import mg.haja.federationagricole.repository.MemberRepository;
 import mg.haja.federationagricole.repository.FinancialAccountRepository;
+import mg.haja.federationagricole.repository.TransactionRepository;
 import org.springframework.stereotype.Service;
 
 import java.sql.SQLException;
@@ -21,13 +23,35 @@ public class CollectivityService {
     private final CollectivityRepository repository;
     private final MemberRepository memberRepository;
     private final FinancialAccountRepository accountRepository;
+    private final TransactionRepository transactionRepository;
 
     public CollectivityService(CollectivityRepository repository,
                                MemberRepository memberRepository,
-                               FinancialAccountRepository accountRepository) {
+                               FinancialAccountRepository accountRepository, TransactionRepository transactionRepository) {
         this.repository = repository;
         this.memberRepository = memberRepository;
         this.accountRepository = accountRepository;
+        this.transactionRepository = transactionRepository;
+    }
+
+    public List<CollectivityTransaction> getCollectivityTransactions(
+            String collectivityId, LocalDate startDate, LocalDate endDate, String accountCreditedId) {
+
+        System.out.println("DEBUG: Called with id=" + collectivityId +
+                ", from=" + startDate + ", to=" + endDate);  // ← AJOUTER
+
+        try {
+            List<CollectivityTransaction> result =
+                    transactionRepository.findByCollectivityAndPeriod(collectivityId, startDate, endDate);
+
+            System.out.println("DEBUG: Found " + result.size() + " transactions");  // ← AJOUTER
+
+            return result;
+        } catch (SQLException e) {
+            System.err.println("SQL ERROR: " + e.getMessage());  // ← AJOUTER
+            e.printStackTrace();
+            throw new RuntimeException("Database error: " + e.getMessage(), e);
+        }
     }
 
     public Collectivity getCollectivityById(String id) {
