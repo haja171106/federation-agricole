@@ -19,16 +19,21 @@ public class FinancialAccountRepository {
         this.connection = connection;
     }
 
-    public List<FinancialAccount> findByCollectivityId(int collectivityId) throws SQLException {
+    // ----------------------------------------------------------------
+    // FIND BY COLLECTIVITY
+    // ----------------------------------------------------------------
+
+    public List<FinancialAccount> findByCollectivityId(String collectivityId) throws SQLException {
         String sql = "SELECT id, type, balance FROM account WHERE collectivity_id = ?";
         List<FinancialAccount> accounts = new ArrayList<>();
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
-            ps.setInt(1, collectivityId);
+            ps.setString(1, collectivityId);
             ResultSet rs = ps.executeQuery();
             while (rs.next()) {
+                String id   = rs.getString("id");
                 String type = rs.getString("type");
-                int id = rs.getInt("id");
-                FinancialAccount acc = fetchAccountDetails(id, type, rs.getDouble("balance"));
+                double bal  = rs.getDouble("balance");
+                FinancialAccount acc = fetchAccountDetails(id, type, bal);
                 if (acc != null) {
                     accounts.add(acc);
                 }
@@ -37,44 +42,94 @@ public class FinancialAccountRepository {
         return accounts;
     }
 
-    public double getBalanceAtDate(int accountId, LocalDate at) throws SQLException {
-        String sqlPayments = "SELECT SUM(amount) FROM member_payment WHERE account_credited_id = ? AND creation_date <= ?";
-        String sqlTransactions = "SELECT SUM(amount) FROM collectivity_transaction WHERE account_credited_id = ? AND creation_date <= ?";
-        
+    // ----------------------------------------------------------------
+    // FIND BY ID
+    // ----------------------------------------------------------------
+
+    public FinancialAccount findById(String accountId) throws SQLException {
+        String sql = "SELECT id, type, balance FROM account WHERE id = ?";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setString(1, accountId);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return fetchAccountDetails(
+                        rs.getString("id"),
+                        rs.getString("type"),
+                        rs.getDouble("balance")
+                );
+            }
+        }
+        return null;
+    }
+
+    // ----------------------------------------------------------------
+    // UPDATE BALANCE
+    // ----------------------------------------------------------------
+
+    public void updateBalance(String accountId, double delta) throws SQLException {
+        String sql = "UPDATE account SET balance = balance + ?, balance_date = CURRENT_DATE WHERE id = ?";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setDouble(1, delta);
+            ps.setString(2, accountId);
+            ps.executeUpdate();
+        }
+    }
+
+    // ----------------------------------------------------------------
+    // BALANCE AT DATE
+    // ----------------------------------------------------------------
+
+    public double getBalanceAtDate(String accountId, LocalDate at) throws SQLException {
+        String sqlPayments = """
+            SELECT COALESCE(SUM(amount), 0)
+            FROM member_payment
+            WHERE account_credited_id = ? AND creation_date <= ?
+        """;
+        String sqlTransactions = """
+            SELECT COALESCE(SUM(amount), 0)
+            FROM collectivity_transaction
+            WHERE account_credited_id = ? AND creation_date <= ?
+        """;
+
         double total = 0;
+
         try (PreparedStatement ps = connection.prepareStatement(sqlPayments)) {
-            ps.setInt(1, accountId);
+            ps.setString(1, accountId);
             ps.setDate(2, Date.valueOf(at));
             ResultSet rs = ps.executeQuery();
-            if (rs.next()) {
-                total += rs.getDouble(1);
-            }
+            if (rs.next()) total += rs.getDouble(1);
         }
+
         try (PreparedStatement ps = connection.prepareStatement(sqlTransactions)) {
-            ps.setInt(1, accountId);
+            ps.setString(1, accountId);
             ps.setDate(2, Date.valueOf(at));
             ResultSet rs = ps.executeQuery();
-            if (rs.next()) {
-                total += rs.getDouble(1);
-            }
+            if (rs.next()) total += rs.getDouble(1);
         }
+
         return total;
     }
 
-    private FinancialAccount fetchAccountDetails(int id, String type, double balance) throws SQLException {
+    // ----------------------------------------------------------------
+    // PRIVATE HELPERS
+    // ----------------------------------------------------------------
+
+    private FinancialAccount fetchAccountDetails(String id, String type, double balance) throws SQLException {
+
         if ("CASH".equals(type)) {
             CashAccount acc = new CashAccount();
-            acc.setId(String.valueOf(id));
+            acc.setId(id);
             acc.setAmount(balance);
             return acc;
+
         } else if ("MOBILE_MONEY".equals(type)) {
             String sql = "SELECT holder, service, phone FROM mobile_money_account WHERE account_id = ?";
             try (PreparedStatement ps = connection.prepareStatement(sql)) {
-                ps.setInt(1, id);
+                ps.setString(1, id);
                 ResultSet rs = ps.executeQuery();
                 if (rs.next()) {
                     MobileBankingAccount acc = new MobileBankingAccount();
-                    acc.setId(String.valueOf(id));
+                    acc.setId(id);
                     acc.setAmount(balance);
                     acc.setHolderName(rs.getString("holder"));
                     acc.setMobileBankingService(MobileBankingService.valueOf(rs.getString("service")));
@@ -82,14 +137,15 @@ public class FinancialAccountRepository {
                     return acc;
                 }
             }
+
         } else if ("BANK".equals(type)) {
             String sql = "SELECT holder, bank_name, account_number FROM bank_account WHERE account_id = ?";
             try (PreparedStatement ps = connection.prepareStatement(sql)) {
-                ps.setInt(1, id);
+                ps.setString(1, id);
                 ResultSet rs = ps.executeQuery();
                 if (rs.next()) {
                     BankAccount acc = new BankAccount();
-                    acc.setId(String.valueOf(id));
+                    acc.setId(id);
                     acc.setAmount(balance);
                     acc.setHolderName(rs.getString("holder"));
                     acc.setBankName(Bank.valueOf(rs.getString("bank_name")));
@@ -102,27 +158,7 @@ public class FinancialAccountRepository {
                 }
             }
         }
-        return null;
-    }
 
-    public FinancialAccount findById(String accountId) throws SQLException {
-        String sql = "SELECT id, type, balance FROM account WHERE id = ?";
-        try (PreparedStatement ps = connection.prepareStatement(sql)) {
-            ps.setInt(1, Integer.parseInt(accountId));
-            ResultSet rs = ps.executeQuery();
-            if (rs.next()) {
-                return fetchAccountDetails(rs.getInt("id"), rs.getString("type"), rs.getDouble("balance"));
-            }
-        }
         return null;
-    }
-
-    public void updateBalance(String accountId, double delta) throws SQLException {
-        String sql = "UPDATE account SET balance = balance + ?, balance_date = CURRENT_DATE WHERE id = ?";
-        try (PreparedStatement ps = connection.prepareStatement(sql)) {
-            ps.setDouble(1, delta);
-            ps.setInt(2, Integer.parseInt(accountId));
-            ps.executeUpdate();
-        }
     }
 }

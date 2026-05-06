@@ -69,7 +69,7 @@ public class CollectivityService {
 
     public List<AccountWithBalance> getAccountsWithBalance(String collectivityId, LocalDate at) {
         try {
-            List<FinancialAccount> accounts = accountRepository.findByCollectivityId(Integer.parseInt(collectivityId));
+            List<FinancialAccount> accounts = accountRepository.findByCollectivityId(String.valueOf(Integer.parseInt(collectivityId)));
             List<AccountWithBalance> result = new ArrayList<>();
 
             for (FinancialAccount acc : accounts) {
@@ -77,7 +77,7 @@ public class CollectivityService {
                 dto.setAccount(acc);
 
                 if (at != null) {
-                    dto.setBalanceAtDate(accountRepository.getBalanceAtDate(Integer.parseInt(acc.getId()), at));
+                    dto.setBalanceAtDate(accountRepository.getBalanceAtDate(String.valueOf(Integer.parseInt(acc.getId())), at));
                 } else {
                     dto.setBalanceAtDate(acc.getAmount());
                 }

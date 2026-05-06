@@ -8,24 +8,26 @@ public class CreateMemberRequest {
     public String firstName;
     public String lastName;
     public LocalDate birthDate;
-    public String gender;
+    public String gender; // MALE | FEMALE
 
     public String address;
     public String profession;
-    public String phone;
+    public String phoneNumber;
     public String email;
 
     public String collectivityId;
 
     public List<SponsorInput> sponsors;
-
-    public int membershipFee; // 50000
-    public int annualContribution;
+    public List<PaymentInput> payments;
 
     public static class SponsorInput {
-        public String memberId;
-        public String collectivityId;
-        public String relationship; // friend, family...
-        public int seniorityDays;
+        public String id; // member ID of the sponsor
+    }
+
+    public static class PaymentInput {
+        public String membershipFeeId;
+        public String accountCreditedId;
+        public double amount;
+        public String paymentMethod; // CASH | MOBILE_BANKING | BANK_TRANSFER | MOBILE_MONEY
     }
 }

@@ -3,6 +3,7 @@ package mg.haja.federationagricole.controller;
 import mg.haja.federationagricole.DTO.CreateMembershipFee;
 import mg.haja.federationagricole.Entity.MembershipFee;
 import mg.haja.federationagricole.service.MembershipFeeService;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -27,6 +28,6 @@ public class MembershipFeeController {
     public ResponseEntity<List<MembershipFee>> create(
             @PathVariable String id,
             @RequestBody List<CreateMembershipFee> requests) {
-        return ResponseEntity.ok(service.create(id, requests));
+        return ResponseEntity.status(HttpStatus.CREATED).body(service.create(id, requests));
     }
 }

@@ -21,7 +21,6 @@ public class PaymentRepository {
     }
 
     public MemberPayment save(String memberId, CreateMemberPayment req) throws SQLException {
-        // ✅ FIX : génération UUID côté Java (id est VARCHAR(50) sans DEFAULT en DB)
         String newId = UUID.randomUUID().toString();
 
         String sql = """
@@ -59,10 +58,8 @@ public class PaymentRepository {
             LIMIT 1
             """;
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
-            // ✅ FIX : setString() — member_id est VARCHAR(50)
             ps.setString(1, memberId);
             ResultSet rs = ps.executeQuery();
-            // ✅ FIX : getString() — collectivity_id est aussi VARCHAR(50)
             return rs.next() ? rs.getString("collectivity_id") : null;
         }
     }
@@ -70,7 +67,6 @@ public class PaymentRepository {
     public boolean memberExists(String memberId) throws SQLException {
         String sql = "SELECT 1 FROM member WHERE id = ?";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
-            // ✅ FIX : setString() — c'était Integer.parseInt() qui causait le crash
             ps.setString(1, memberId);
             return ps.executeQuery().next();
         }
@@ -79,7 +75,6 @@ public class PaymentRepository {
     public boolean membershipFeeExists(String feeId) throws SQLException {
         String sql = "SELECT 1 FROM membership_fee WHERE id = ?";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
-            // ✅ FIX : setString()
             ps.setString(1, feeId);
             return ps.executeQuery().next();
         }

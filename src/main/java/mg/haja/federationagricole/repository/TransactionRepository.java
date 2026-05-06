@@ -9,6 +9,7 @@ import java.sql.*;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @Repository
 public class TransactionRepository {
@@ -19,6 +20,41 @@ public class TransactionRepository {
     public TransactionRepository(Connection connection, FinancialAccountRepository accountRepository) {
         this.connection = connection;
         this.accountRepository = accountRepository;
+    }
+
+    public void save(
+            String collectivityId,
+            String memberId,
+            double amount,
+            PaymentMode paymentMode,
+            String accountCreditedId) throws SQLException {
+
+        String id = "TXN-" + UUID.randomUUID().toString().replace("-", "").substring(0, 16).toUpperCase();
+
+        String sql = """
+            INSERT INTO collectivity_transaction
+                (id, collectivity_id, member_debited_id, amount, payment_mode, account_credited_id, creation_date)
+            VALUES (?, ?, ?, ?, ?, ?, CURRENT_DATE)
+            """;
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setString(1, id);
+            ps.setString(2, collectivityId);
+            ps.setString(3, memberId);
+            ps.setDouble(4, amount);
+            ps.setString(5, paymentMode.name());
+            ps.setString(6, accountCreditedId);
+            ps.executeUpdate();
+        }
+
+        CollectivityTransaction tx = new CollectivityTransaction();
+        tx.setId(id);
+        tx.setCreationDate(LocalDate.now());
+        tx.setAmount(amount);
+        tx.setPaymentMode(paymentMode);
+        tx.setMemberDebitedId(memberId);
+        tx.setAccountCredited(accountRepository.findById(accountCreditedId));
+
     }
 
     public List<CollectivityTransaction> findByCollectivityAndPeriod(
@@ -43,23 +79,20 @@ public class TransactionRepository {
 
             while (rs.next()) {
                 CollectivityTransaction tx = new CollectivityTransaction();
-
-                tx.setId(String.valueOf(rs.getObject("id")));
+                tx.setId(rs.getString("id"));
                 tx.setCreationDate(rs.getDate("creation_date").toLocalDate());
                 tx.setAmount(rs.getDouble("amount"));
                 tx.setPaymentMode(PaymentMode.valueOf(rs.getString("payment_mode")));
-                tx.setMemberDebitedId(String.valueOf(rs.getObject("member_debited_id")));
+                tx.setMemberDebitedId(rs.getString("member_debited_id"));
 
                 String accountId = rs.getString("account_credited_id");
-                if (accountId != null && !accountId.isEmpty()) {
+                if (accountId != null && !accountId.isBlank()) {
                     try {
                         FinancialAccount account = accountRepository.findById(accountId);
                         tx.setAccountCredited(account);
                     } catch (Exception e) {
-                        System.out.println("WARNING: Cannot load account " + accountId + ": " + e.getMessage());
+                        System.err.println("WARNING: Cannot load account " + accountId + ": " + e.getMessage());
                     }
-                } else {
-                    tx.setAccountCredited(null);
                 }
 
                 transactions.add(tx);
@@ -69,52 +102,8 @@ public class TransactionRepository {
         return transactions;
     }
 
-    public CollectivityTransaction save(
-            String collectivityId,
-            String memberId,
-            double amount,
-            PaymentMode paymentMode,
-            String accountCreditedId) throws SQLException {
-
-        String sql = """
-            INSERT INTO collectivity_transaction
-                (collectivity_id, member_debited_id, amount, payment_mode, account_credited_id, creation_date)
-            VALUES (?, ?, ?, ?, ?, CURRENT_DATE)
-            RETURNING id
-            """;
-
-        String id;
-
-        try (PreparedStatement ps = connection.prepareStatement(sql)) {
-            ps.setString(1, collectivityId);
-            ps.setString(2, memberId);
-            ps.setDouble(3, amount);
-            ps.setString(4, paymentMode.name());
-            ps.setString(5, accountCreditedId);
-
-            ResultSet rs = ps.executeQuery();
-
-            if (rs.next()) {
-                id = String.valueOf(rs.getObject(1));
-            } else {
-                throw new SQLException("Failed to insert transaction");
-            }
-        }
-
-        CollectivityTransaction tx = new CollectivityTransaction();
-        tx.setId(id);
-        tx.setCreationDate(LocalDate.now());
-        tx.setAmount(amount);
-        tx.setPaymentMode(paymentMode);
-        tx.setMemberDebitedId(memberId);
-        tx.setAccountCredited(accountRepository.findById(accountCreditedId));
-
-        return tx;
-    }
-
     public boolean collectivityExists(String collectivityId) throws SQLException {
         String sql = "SELECT 1 FROM collectivity WHERE id = ?";
-
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, collectivityId);
             return ps.executeQuery().next();

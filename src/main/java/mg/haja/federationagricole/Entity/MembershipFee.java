@@ -11,11 +11,14 @@ public class MembershipFee extends CreateMembershipFee {
     private ActivityStatus status;
 
     public MembershipFee(String id, ActivityStatus status) {
+        super();
         this.id = id;
         this.status = status;
     }
 
     public MembershipFee() {
-
+        super();
     }
+
+
 }

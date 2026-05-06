@@ -4,6 +4,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.time.LocalDate;
+
 @Setter
 @Getter
 public class Member {
@@ -22,7 +23,11 @@ public class Member {
     private LocalDate membershipDate;
     private String collectivityId;
 
-    public Member(String id, String lastName, String firstName, LocalDate birthDate, String gender, String address, String profession, String phone, String email, LocalDate membershipDate, String collectivityId) {
+    public Member() {}
+
+    public Member(String id, String lastName, String firstName, LocalDate birthDate,
+                  String gender, String address, String profession, String phone,
+                  String email, LocalDate membershipDate, String collectivityId) {
         this.id = id;
         this.lastName = lastName;
         this.firstName = firstName;
@@ -34,9 +39,5 @@ public class Member {
         this.email = email;
         this.membershipDate = membershipDate;
         this.collectivityId = collectivityId;
-    }
-
-    public Member() {
-
     }
 }

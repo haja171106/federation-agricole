@@ -9,6 +9,7 @@ import org.springframework.stereotype.Repository;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @Repository
 public class MembershipFeeRepository {
@@ -31,7 +32,7 @@ public class MembershipFeeRepository {
 
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
 
-            ps.setString(1, collectivityId); // ✅ FIX STRING
+            ps.setString(1, collectivityId);
 
             ResultSet rs = ps.executeQuery();
 
@@ -44,45 +45,42 @@ public class MembershipFeeRepository {
     }
 
     public List<MembershipFee> saveAll(String collectivityId, List<CreateMembershipFee> requests) throws SQLException {
-
         String sql = """
-            INSERT INTO membership_fee (collectivity_id, eligible_from, frequency, amount, label, status)
-            VALUES (?, ?, ?, ?, ?, ?)
-            RETURNING id
+        INSERT INTO membership_fee (id, collectivity_id, eligible_from, frequency, amount, label, status, statut) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?) 
+        RETURNING id
         """;
 
         List<MembershipFee> created = new ArrayList<>();
-
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
-
             for (CreateMembershipFee req : requests) {
+                // Générer ID UUID (36 chars, fits varchar(50))
+                String id = UUID.randomUUID().toString().toUpperCase();
 
-                ps.setString(1, collectivityId); // ✅ FIX STRING
-                ps.setDate(2, Date.valueOf(req.getEligibleFrom()));
-                ps.setString(3, req.getFrequency().name());
-                ps.setDouble(4, req.getAmount());
-                ps.setString(5, req.getLabel());
-                ps.setString(6, ActivityStatus.ACTIVE.name());
+                ps.setString(1, id);  // id
+                ps.setString(2, collectivityId);  // collectivity_id
+                ps.setDate(3, Date.valueOf(req.getEligibleFrom()));  // eligible_from
+                ps.setString(4, req.getFrequency().name());  // frequency (MONTHLY -> MONTHLY)
+                ps.setDouble(5, req.getAmount());  // amount
+                ps.setString(6, req.getLabel());  // label
+                ps.setString(7, ActivityStatus.ACTIVE.name());  // status
+                ps.setString(8, ActivityStatus.ACTIVE.name());  // statut
 
-                ResultSet rs = ps.executeQuery();
-
-                String id = null;
-                if (rs.next()) {
-                    id = rs.getString(1);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) {
+                    }
                 }
-
                 MembershipFee fee = new MembershipFee();
                 fee.setId(id);
+                fee.setCollectivityId(collectivityId);
                 fee.setEligibleFrom(req.getEligibleFrom());
                 fee.setFrequency(req.getFrequency());
                 fee.setAmount(req.getAmount());
                 fee.setLabel(req.getLabel());
                 fee.setStatus(ActivityStatus.ACTIVE);
-
                 created.add(fee);
             }
         }
-
         return created;
     }
 
@@ -94,7 +92,7 @@ public class MembershipFeeRepository {
 
             ps.setString(1, collectivityId);
 
-            return !ps.executeQuery().next();
+            return ps.executeQuery().next(); // true = la collectivité existe
         }
     }
 
@@ -103,7 +101,6 @@ public class MembershipFeeRepository {
         MembershipFee fee = new MembershipFee();
 
         fee.setId(rs.getString("id"));
-
         fee.setEligibleFrom(rs.getDate("eligible_from").toLocalDate());
         fee.setFrequency(Frequency.valueOf(rs.getString("frequency")));
         fee.setAmount(rs.getDouble("amount"));

@@ -21,7 +21,7 @@ public class MembershipFeeService {
 
     public List<MembershipFee> getByCollectivity(String collectivityId) {
         try {
-            if (repository.collectivityExists(collectivityId)) {
+            if (!repository.collectivityExists(collectivityId)) {
                 throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Collectivity not found");
             }
             return repository.findByCollectivityId(collectivityId);
@@ -34,15 +34,17 @@ public class MembershipFeeService {
 
     public List<MembershipFee> create(String collectivityId, List<CreateMembershipFee> requests) {
         try {
-            if (repository.collectivityExists(collectivityId)) {
+            if (!repository.collectivityExists(collectivityId)) {
                 throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Collectivity not found");
             }
             for (CreateMembershipFee req : requests) {
                 if (req.getFrequency() == null) {
-                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unrecognized frequency");
+                    throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
+                            "Unrecognized frequency value for label: " + req.getLabel());
                 }
                 if (req.getAmount() < 0) {
-                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Amount must be >= 0");
+                    throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
+                            "Amount must be >= 0 for label: " + req.getLabel());
                 }
             }
             return repository.saveAll(collectivityId, requests);

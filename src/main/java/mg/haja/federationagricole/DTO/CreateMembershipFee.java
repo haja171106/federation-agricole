@@ -1,20 +1,29 @@
 package mg.haja.federationagricole.DTO;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.Getter;
+import lombok.Setter;
 import mg.haja.federationagricole.Entity.enums.Frequency;
+
 import java.time.LocalDate;
 
+@Getter
+@Setter
 public class CreateMembershipFee {
-    private LocalDate eligibleFrom;
-    private Frequency frequency;
-    private double amount;
-    private String label;
 
-    public LocalDate getEligibleFrom()              { return eligibleFrom; }
-    public void setEligibleFrom(LocalDate v)        { this.eligibleFrom = v; }
-    public Frequency getFrequency()                 { return frequency; }
-    public void setFrequency(Frequency v)           { this.frequency = v; }
-    public double getAmount()                       { return amount; }
-    public void setAmount(double v)                 { this.amount = v; }
-    public String getLabel()                        { return label; }
-    public void setLabel(String v)                  { this.label = v; }
+    private String label;
+    private double amount;
+
+    @JsonProperty("type")
+    private Frequency frequency;
+
+    private LocalDate eligibleFrom;
+
+    @JsonProperty("type")
+    public void setFrequency(Frequency frequency) {
+        this.frequency = frequency;
+    }
+
+    public void setCollectivityId(String collectivityId) {
+    }
 }
