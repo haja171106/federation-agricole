@@ -1,4 +1,5 @@
 package mg.haja.federationagricole.DTO;
+
 import lombok.Getter;
 import lombok.Setter;
 
@@ -9,6 +10,7 @@ public class CollectivityLocalStatistics {
     private MemberDescription memberDescription;
     private double earnedAmount;
     private double unpaidAmount;
+    private double assiduityPercentage;
 
     @Setter
     @Getter
