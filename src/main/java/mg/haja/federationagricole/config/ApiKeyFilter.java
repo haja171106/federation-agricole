@@ -18,7 +18,6 @@ public class ApiKeyFilter extends OncePerRequestFilter {
     private final String expectedApiKey;
 
     public ApiKeyFilter() {
-        // Load the .env file and get the key
         this.expectedApiKey = Dotenv.load().get("API_KEY");
     }
 
@@ -27,8 +26,6 @@ public class ApiKeyFilter extends OncePerRequestFilter {
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
         String path = request.getRequestURI();
-        
-        // Protect everything except standard Spring error paths or favicon
         if (!path.equals("/error") && !path.equals("/favicon.ico")) {
             String providedKey = request.getHeader(API_KEY_HEADER);
             
