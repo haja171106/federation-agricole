@@ -17,10 +17,6 @@ public class MemberRepository {
         this.connection = connection;
     }
 
-    // ----------------------------------------------------------------
-    // SAVE (INSERT or UPDATE)
-    // ----------------------------------------------------------------
-
     public Member save(Member m) throws SQLException {
         if (m.getId() == null || m.getId().isBlank()) {
             return insert(m);
@@ -30,7 +26,6 @@ public class MemberRepository {
     }
 
     private Member insert(Member m) throws SQLException {
-        // Generate a simple ID: MBR-<timestamp>
         String newId = "MBR-" + System.currentTimeMillis();
         m.setId(newId);
 
@@ -84,14 +79,6 @@ public class MemberRepository {
         return m;
     }
 
-    // ----------------------------------------------------------------
-    // ADHESION
-    // ----------------------------------------------------------------
-
-    /**
-     * Creates an adhesion row linking the member to the collectivity.
-     * adhesion.id = "ADH-" + memberId + "-" + collectivityId
-     */
     public void saveAdhesion(String memberId, String collectivityId) throws SQLException {
         String adhesionId = "ADH-" + memberId + "-" + collectivityId;
 
@@ -109,14 +96,6 @@ public class MemberRepository {
         }
     }
 
-    // ----------------------------------------------------------------
-    // ADHESION REFERENTS (sponsors)
-    // ----------------------------------------------------------------
-
-    /**
-     * Links a sponsor (referent) to an adhesion.
-     * referent_id is the existing member ID of the sponsor.
-     */
     public void saveAdhesionReferent(String adhesionId, String referentId) throws SQLException {
         String referentRowId = "REF-" + adhesionId + "-" + referentId;
 
@@ -133,10 +112,6 @@ public class MemberRepository {
             ps.executeUpdate();
         }
     }
-
-    // ----------------------------------------------------------------
-    // MEMBER PAYMENT
-    // ----------------------------------------------------------------
 
     public void savePayment(String memberId, String membershipFeeId,
                             String accountCreditedId, double amount,
@@ -160,10 +135,6 @@ public class MemberRepository {
             ps.executeUpdate();
         }
     }
-
-    // ----------------------------------------------------------------
-    // FIND METHODS
-    // ----------------------------------------------------------------
 
     public Optional<Member> findById(String id) throws SQLException {
         String sql = "SELECT * FROM member WHERE id = ?";
@@ -189,10 +160,6 @@ public class MemberRepository {
         return Optional.empty();
     }
 
-    /**
-     * Returns members who have an active adhesion in the given collectivity.
-     * collectivityId is stored in the adhesion table.
-     */
     public Optional<Member> findByIdWithCollectivity(String memberId, String collectivityId) throws SQLException {
         String sql = """
             SELECT m.* FROM member m

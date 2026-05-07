@@ -38,17 +38,17 @@ public class CollectivityService {
             String collectivityId, LocalDate startDate, LocalDate endDate, String accountCreditedId) {
 
         System.out.println("DEBUG: Called with id=" + collectivityId +
-                ", from=" + startDate + ", to=" + endDate);  // ← AJOUTER
+                ", from=" + startDate + ", to=" + endDate);
 
         try {
             List<CollectivityTransaction> result =
                     transactionRepository.findByCollectivityAndPeriod(collectivityId, startDate, endDate);
 
-            System.out.println("DEBUG: Found " + result.size() + " transactions");  // ← AJOUTER
+            System.out.println("DEBUG: Found " + result.size() + " transactions");
 
             return result;
         } catch (SQLException e) {
-            System.err.println("SQL ERROR: " + e.getMessage());  // ← AJOUTER
+            System.err.println("SQL ERROR: " + e.getMessage());
             e.printStackTrace();
             throw new RuntimeException("Database error: " + e.getMessage(), e);
         }

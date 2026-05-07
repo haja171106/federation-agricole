@@ -17,10 +17,6 @@ public class StatisticsRepository {
     public StatisticsRepository(Connection connection) {
         this.connection = connection;
     }
-
-    // ────────────────────────────────────────────────────────────────────────────
-    // LOCAL STATISTICS  –  GET /collectivites/{id}/statistics
-    // ────────────────────────────────────────────────────────────────────────────
     public List<CollectivityLocalStatistics> findLocalStatistics(
             String collectivityId, LocalDate from, LocalDate to) throws SQLException {
 
@@ -114,22 +110,22 @@ public class StatisticsRepository {
         List<CollectivityLocalStatistics> result = new ArrayList<>();
 
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
-            ps.setString(1, collectivityId);   // adhesion.collectivity_id
-            ps.setString(2, collectivityId);   // mandate.collectivity_id
-            ps.setDate(3, Date.valueOf(from)); // earned from
-            ps.setDate(4, Date.valueOf(to));   // earned to
-            ps.setString(5, to.toString());    // WEEKLY to
-            ps.setString(6, from.toString());  // WEEKLY from
-            ps.setString(7, to.toString());    // MONTHLY AGE to
-            ps.setString(8, from.toString());  // MONTHLY AGE from
-            ps.setString(9, to.toString());    // MONTHLY AGE to (MONTH part)
-            ps.setString(10, from.toString()); // MONTHLY AGE from (MONTH part)
-            ps.setString(11, to.toString());   // ANNUALLY AGE to
-            ps.setString(12, from.toString()); // ANNUALLY AGE from
-            ps.setString(13, collectivityId);  // WHERE collectivity_id
-            ps.setString(14, to.toString());   // WHERE eligible_from <=
-            ps.setString(15, collectivityId);  // paid_per_fee collectivity_id
-            ps.setString(16, to.toString());   // paid_per_fee creation_date <=
+            ps.setString(1, collectivityId);
+            ps.setString(2, collectivityId);
+            ps.setDate(3, Date.valueOf(from));
+            ps.setDate(4, Date.valueOf(to));
+            ps.setString(5, to.toString());
+            ps.setString(6, from.toString());
+            ps.setString(7, to.toString());
+            ps.setString(8, from.toString());
+            ps.setString(9, to.toString());
+            ps.setString(10, from.toString());
+            ps.setString(11, to.toString());
+            ps.setString(12, from.toString());
+            ps.setString(13, collectivityId);
+            ps.setString(14, to.toString());
+            ps.setString(15, collectivityId);
+            ps.setString(16, to.toString());
 
             ResultSet rs = ps.executeQuery();
             while (rs.next()) {
@@ -152,9 +148,6 @@ public class StatisticsRepository {
         return result;
     }
 
-    // ────────────────────────────────────────────────────────────────────────────
-    // OVERALL STATISTICS  –  GET /collectivites/statistics
-    // ────────────────────────────────────────────────────────────────────────────
     public List<CollectivityOverallStatistics> findOverallStatistics(
             LocalDate from, LocalDate to) throws SQLException {
 
@@ -264,14 +257,14 @@ public class StatisticsRepository {
         List<CollectivityOverallStatistics> result = new ArrayList<>();
 
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
-            ps.setDate(1, Date.valueOf(from));  // new_members from
-            ps.setDate(2, Date.valueOf(to));    // new_members to
-            ps.setString(3, to.toString());     // active_fees eligible_from <=
-            ps.setString(4, to.toString());     // WEEKLY to
-            ps.setString(5, to.toString());     // MONTHLY AGE to
-            ps.setString(6, to.toString());     // MONTHLY AGE to (MONTH part)
-            ps.setString(7, to.toString());     // ANNUALLY AGE to
-            ps.setString(8, to.toString());     // paid_per_member_fee creation_date <=
+            ps.setDate(1, Date.valueOf(from));
+            ps.setDate(2, Date.valueOf(to));
+            ps.setString(3, to.toString());
+            ps.setString(4, to.toString());
+            ps.setString(5, to.toString());
+            ps.setString(6, to.toString());
+            ps.setString(7, to.toString());
+            ps.setString(8, to.toString());
 
             ResultSet rs = ps.executeQuery();
             while (rs.next()) {

@@ -1,7 +1,5 @@
 package mg.haja.federationagricole.DTO;
 
-// ── Overall statistics (per collectivity, global view) ────────────────────────
-
 import lombok.Getter;
 import lombok.Setter;
 

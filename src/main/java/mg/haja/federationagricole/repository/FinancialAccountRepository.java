@@ -19,10 +19,6 @@ public class FinancialAccountRepository {
         this.connection = connection;
     }
 
-    // ----------------------------------------------------------------
-    // FIND BY COLLECTIVITY
-    // ----------------------------------------------------------------
-
     public List<FinancialAccount> findByCollectivityId(String collectivityId) throws SQLException {
         String sql = "SELECT id, type, balance FROM account WHERE collectivity_id = ?";
         List<FinancialAccount> accounts = new ArrayList<>();
@@ -42,10 +38,6 @@ public class FinancialAccountRepository {
         return accounts;
     }
 
-    // ----------------------------------------------------------------
-    // FIND BY ID
-    // ----------------------------------------------------------------
-
     public FinancialAccount findById(String accountId) throws SQLException {
         String sql = "SELECT id, type, balance FROM account WHERE id = ?";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
@@ -62,10 +54,6 @@ public class FinancialAccountRepository {
         return null;
     }
 
-    // ----------------------------------------------------------------
-    // UPDATE BALANCE
-    // ----------------------------------------------------------------
-
     public void updateBalance(String accountId, double delta) throws SQLException {
         String sql = "UPDATE account SET balance = balance + ?, balance_date = CURRENT_DATE WHERE id = ?";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
@@ -74,10 +62,6 @@ public class FinancialAccountRepository {
             ps.executeUpdate();
         }
     }
-
-    // ----------------------------------------------------------------
-    // BALANCE AT DATE
-    // ----------------------------------------------------------------
 
     public double getBalanceAtDate(String accountId, LocalDate at) throws SQLException {
         String sqlPayments = """
@@ -109,10 +93,6 @@ public class FinancialAccountRepository {
 
         return total;
     }
-
-    // ----------------------------------------------------------------
-    // PRIVATE HELPERS
-    // ----------------------------------------------------------------
 
     private FinancialAccount fetchAccountDetails(String id, String type, double balance) throws SQLException {
 

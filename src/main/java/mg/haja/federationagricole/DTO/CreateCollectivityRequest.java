@@ -18,6 +18,6 @@ public class CreateCollectivityRequest {
     public static class MemberInput {
         public int memberId;
         public LocalDate membershipDate;
-        public String role; // PRESIDENT, TREASURER, etc.
+        public String role;
     }
 }

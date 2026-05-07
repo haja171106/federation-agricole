@@ -19,10 +19,6 @@ public class StatisticsController {
         this.statisticsService = statisticsService;
     }
 
-    /**
-     * GET /collectivites/{id}/statistics?from=2026-01-01&to=2026-05-06
-     * Stats locales : montant encaissé + impayé potentiel par membre.
-     */
     @GetMapping("/collectivites/{id}/statistics")
     public ResponseEntity<List<CollectivityLocalStatistics>> getLocalStatistics(
             @PathVariable String id,
@@ -32,10 +28,6 @@ public class StatisticsController {
         return ResponseEntity.ok(statisticsService.getLocalStatistics(id, from, to));
     }
 
-    /**
-     * GET /collectivites/statistics?from=2026-01-01&to=2026-05-06
-     * Stats globales : % membres à jour + nouveaux adhérents par collectivité.
-     */
     @GetMapping("/collectivites/statistics")
     public ResponseEntity<List<CollectivityOverallStatistics>> getOverallStatistics(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,

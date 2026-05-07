@@ -30,7 +30,6 @@ public class PaymentRepository {
             """;
 
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
-            // ✅ FIX : setString() partout — les IDs sont VARCHAR(50), pas des entiers
             ps.setString(1, newId);
             ps.setString(2, memberId);
             ps.setString(3, req.getMembershipFeeIdentifier());

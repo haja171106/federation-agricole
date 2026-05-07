@@ -54,17 +54,16 @@ public class MembershipFeeRepository {
         List<MembershipFee> created = new ArrayList<>();
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             for (CreateMembershipFee req : requests) {
-                // Générer ID UUID (36 chars, fits varchar(50))
                 String id = UUID.randomUUID().toString().toUpperCase();
 
-                ps.setString(1, id);  // id
-                ps.setString(2, collectivityId);  // collectivity_id
-                ps.setDate(3, Date.valueOf(req.getEligibleFrom()));  // eligible_from
-                ps.setString(4, req.getFrequency().name());  // frequency (MONTHLY -> MONTHLY)
-                ps.setDouble(5, req.getAmount());  // amount
-                ps.setString(6, req.getLabel());  // label
-                ps.setString(7, ActivityStatus.ACTIVE.name());  // status
-                ps.setString(8, ActivityStatus.ACTIVE.name());  // statut
+                ps.setString(1, id);
+                ps.setString(2, collectivityId);
+                ps.setDate(3, Date.valueOf(req.getEligibleFrom()));
+                ps.setString(4, req.getFrequency().name());
+                ps.setDouble(5, req.getAmount());
+                ps.setString(6, req.getLabel());
+                ps.setString(7, ActivityStatus.ACTIVE.name());
+                ps.setString(8, ActivityStatus.ACTIVE.name());
 
                 try (ResultSet rs = ps.executeQuery()) {
                     if (rs.next()) {
@@ -92,7 +91,7 @@ public class MembershipFeeRepository {
 
             ps.setString(1, collectivityId);
 
-            return ps.executeQuery().next(); // true = la collectivité existe
+            return ps.executeQuery().next();
         }
     }
 

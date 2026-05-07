@@ -44,13 +44,13 @@ public class PaymentService {
                     throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Membership fee not found");
                 }
 
-                // 1. Save payment
+
                 MemberPayment payment = paymentRepository.save(memberId, req);
 
-                // 2. Update account balance
+
                 accountRepository.updateBalance(req.getAccountCreditedIdentifier(), req.getAmount());
 
-                // 3. Auto-create transaction
+
                 transactionRepository.save(
                     collectivityId, memberId,
                     req.getAmount(), req.getPaymentMode(),
