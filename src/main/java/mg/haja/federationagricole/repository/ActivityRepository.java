@@ -32,7 +32,7 @@ public class ActivityRepository {
         }
 
         String id = "ACT-" + UUID.randomUUID().toString().replace("-", "").substring(0, 12).toUpperCase();
-        String dbType = mapActivityTypeToDb(req.activityType);
+        String dbType = mapActivityTypeToDb(String.valueOf(req.activityType));
 
         Timestamp activityDate;
         String description = null;
@@ -411,7 +411,7 @@ public class ActivityRepository {
         CollectivityActivity act = new CollectivityActivity();
         act.setId(id);
         act.setLabel(req.label);
-        act.setActivityType(ActivityType.valueOf(req.activityType));
+        act.setActivityType(ActivityType.valueOf(String.valueOf(req.activityType)));
         act.setMemberOccupationConcerned(req.memberOccupationConcerned);
         act.setExecutiveDate(req.executiveDate);
 

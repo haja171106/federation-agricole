@@ -1,12 +1,14 @@
 package mg.haja.federationagricole.DTO;
 
+import mg.haja.federationagricole.Entity.enums.ActivityType;
+
 import java.time.LocalDate;
 import java.util.List;
 
 public class CreateCollectivityActivity {
 
     public String label;
-    public String activityType;
+    public ActivityType activityType;
 
     public List<String> memberOccupationConcerned;
 
