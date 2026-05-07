@@ -19,7 +19,7 @@ public class StatisticsController {
         this.statisticsService = statisticsService;
     }
 
-    @GetMapping("/collectivites/{id}/statistics")
+    @GetMapping("/collectivities/{id}/statistics")
     public ResponseEntity<List<CollectivityLocalStatistics>> getLocalStatistics(
             @PathVariable String id,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
@@ -28,7 +28,7 @@ public class StatisticsController {
         return ResponseEntity.ok(statisticsService.getLocalStatistics(id, from, to));
     }
 
-    @GetMapping("/collectivites/statistics")
+    @GetMapping("/collectivities/statistics")
     public ResponseEntity<List<CollectivityOverallStatistics>> getOverallStatistics(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {

@@ -22,10 +22,10 @@ public class StatisticsRepository {
 
         String sql = """
             WITH
-            current_mandate AS (
+            latest_mandate AS (
                 SELECT id FROM mandate
                 WHERE collectivity_id = ?
-                  AND CURRENT_DATE BETWEEN start_date AND end_date
+                ORDER BY end_date DESC
                 LIMIT 1
             ),
 
@@ -42,7 +42,7 @@ public class StatisticsRepository {
                    AND a.collectivity_id = ?
                    AND a.active          = TRUE
                 LEFT JOIN mandate_position mp
-                    ON mp.mandate_id = (SELECT id FROM current_mandate)
+                    ON mp.mandate_id = (SELECT id FROM latest_mandate)
                    AND mp.member_id  = m.id
             ),
 
@@ -111,11 +111,13 @@ public class StatisticsRepository {
                         SELECT 1 FROM activity_target_position atp
                         WHERE atp.activity_id = pa.activity_id
                     )
-                    OR
-                    EXISTS (
-                        SELECT 1 FROM activity_target_position atp
-                        WHERE atp.activity_id = pa.activity_id
-                          AND atp.position    = am.occupation
+                    OR (
+                        am.occupation IS NOT NULL
+                        AND EXISTS (
+                            SELECT 1 FROM activity_target_position atp
+                            WHERE atp.activity_id = pa.activity_id
+                              AND atp.position    = am.occupation
+                        )
                     )
             ),
 
@@ -220,18 +222,19 @@ public class StatisticsRepository {
 
         String sql = """
             WITH
-            -- Membres actifs par collectivité avec occupation
             active_members AS (
                 SELECT
                     a.collectivity_id,
                     a.member_id,
                     mp.position AS occupation
                 FROM adhesion a
-                LEFT JOIN mandate man
-                    ON man.collectivity_id = a.collectivity_id
-                   AND CURRENT_DATE BETWEEN man.start_date AND man.end_date
+                LEFT JOIN (
+                    SELECT DISTINCT ON (collectivity_id) id, collectivity_id
+                    FROM mandate
+                    ORDER BY collectivity_id, end_date DESC
+                ) latest_man ON latest_man.collectivity_id = a.collectivity_id
                 LEFT JOIN mandate_position mp
-                    ON mp.mandate_id = man.id
+                    ON mp.mandate_id = latest_man.id
                    AND mp.member_id  = a.member_id
                 WHERE a.active = TRUE
             ),
@@ -318,14 +321,16 @@ public class StatisticsRepository {
                         SELECT 1 FROM activity_target_position atp
                         WHERE atp.activity_id = pa.activity_id
                     )
-                    OR EXISTS (
-                        SELECT 1 FROM activity_target_position atp
-                        WHERE atp.activity_id = pa.activity_id
-                          AND atp.position    = am.occupation
+                    OR (
+                        am.occupation IS NOT NULL
+                        AND EXISTS (
+                            SELECT 1 FROM activity_target_position atp
+                            WHERE atp.activity_id = pa.activity_id
+                              AND atp.position    = am.occupation
+                        )
                     )
             ),
 
-            -- Présences PRESENT par membre
             member_attended AS (
                 SELECT p.member_id, pa.collectivity_id, COUNT(*) AS attended_count
                 FROM presence p
@@ -334,14 +339,12 @@ public class StatisticsRepository {
                 GROUP BY p.member_id, pa.collectivity_id
             ),
 
-            -- Total activités concernées par membre
             member_concerned_count AS (
                 SELECT collectivity_id, member_id, COUNT(*) AS concerned_count
                 FROM member_concerned_activities
                 GROUP BY collectivity_id, member_id
             ),
 
-            -- Assiduité individuelle par membre
             member_assiduity AS (
                 SELECT
                     mcc.collectivity_id,
@@ -359,11 +362,8 @@ public class StatisticsRepository {
                    AND ma.collectivity_id = mcc.collectivity_id
             ),
 
-            -- Moyenne d'assiduité par collectivité
             collectivity_assiduity AS (
-                SELECT
-                    collectivity_id,
-                    ROUND(AVG(assiduity_pct), 2) AS avg_assiduity
+                SELECT collectivity_id, ROUND(AVG(assiduity_pct), 2) AS avg_assiduity
                 FROM member_assiduity
                 GROUP BY collectivity_id
             )
@@ -382,8 +382,8 @@ public class StatisticsRepository {
                 END                                                         AS overall_percentage,
                 COALESCE(ca.avg_assiduity, 100.0)                          AS overall_assiduity
             FROM collectivity c
-            LEFT JOIN new_members          nm ON nm.collectivity_id = c.id
-            LEFT JOIN current_percentage   cp ON cp.collectivity_id = c.id
+            LEFT JOIN new_members            nm ON nm.collectivity_id = c.id
+            LEFT JOIN current_percentage     cp ON cp.collectivity_id = c.id
             LEFT JOIN collectivity_assiduity ca ON ca.collectivity_id = c.id
             ORDER BY c.name
             """;
@@ -391,16 +391,16 @@ public class StatisticsRepository {
         List<CollectivityOverallStatistics> result = new ArrayList<>();
 
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
-            ps.setDate(1, Date.valueOf(from));  // new_members from
-            ps.setDate(2, Date.valueOf(to));    // new_members to
-            ps.setString(3, to.toString());     // active_fees eligible_from <=
-            ps.setString(4, to.toString());     // expected WEEKLY to
-            ps.setString(5, to.toString());     // expected MONTHLY AGE to
-            ps.setString(6, to.toString());     // expected MONTHLY AGE to (MONTH)
-            ps.setString(7, to.toString());     // expected ANNUALLY AGE to
-            ps.setString(8, to.toString());     // paid_per_member_fee creation_date <=
-            ps.setDate(9, Date.valueOf(from));  // period_activities from
-            ps.setDate(10, Date.valueOf(to));   // period_activities to
+            ps.setDate(1, Date.valueOf(from));
+            ps.setDate(2, Date.valueOf(to));
+            ps.setString(3, to.toString());
+            ps.setString(4, to.toString());
+            ps.setString(5, to.toString());
+            ps.setString(6, to.toString());
+            ps.setString(7, to.toString());
+            ps.setString(8, to.toString());
+            ps.setDate(9, Date.valueOf(from));
+            ps.setDate(10, Date.valueOf(to));
 
             ResultSet rs = ps.executeQuery();
             while (rs.next()) {
